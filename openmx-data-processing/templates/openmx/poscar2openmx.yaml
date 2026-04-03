@@ -1,0 +1,63 @@
+system_name: "__SYSTEM_NAME__"
+
+poscar_path: "__POSCAR_GLOB__"
+filepath: "__OPENMX_INPUT_ROOT__"
+
+basic_command: |+
+  #
+  #      File Name
+  #
+
+  System.CurrrentDirectory         ./
+  System.Name                     __SYSTEM_NAME__
+  DATA.PATH           __OPENMX_DATA_PATH__
+  level.of.stdout                   1
+  level.of.fileout                  1
+  HS.fileout                   on
+
+  #
+  # SCF or Electronic System
+  #
+
+  scf.XcType                  GGA-PBE
+  scf.SpinPolarization        off
+  scf.SpinOrbit.Coupling      off
+  scf.ElectronicTemperature  300.0
+  scf.energycutoff           150.0
+  scf.maxIter                 300
+  scf.EigenvalueSolver        Band
+  scf.Kgrid                  5 5 5
+  scf.Mixing.Type           rmm-diis
+  scf.Init.Mixing.Weight     0.10
+  scf.Min.Mixing.Weight      0.001
+  scf.Max.Mixing.Weight      0.400
+  scf.Mixing.History          7
+  scf.Mixing.StartPulay       5
+  scf.criterion             1.0e-7
+
+  #
+  # MD or Geometry Optimization
+  #
+
+  MD.Type                      Nomd
+  MD.Opt.DIIS.History          4
+  MD.Opt.StartDIIS             5
+  MD.maxIter                 100
+  MD.TimeStep                1.0
+  MD.Opt.criterion          1.0e-4
+
+  #
+  # MO output
+  #
+
+  MO.fileout                  off
+  num.HOMOs                    2
+  num.LUMOs                    2
+
+  #
+  # DOS and PDOS
+  #
+
+  Dos.fileout                  off
+  Dos.Erange              -10.0  10.0
+  Dos.Kgrid                 1  1  1

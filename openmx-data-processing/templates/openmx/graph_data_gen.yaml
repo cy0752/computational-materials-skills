@@ -1,0 +1,10 @@
+nao_max: __NAO_MAX__
+graph_data_save_path: "__GRAPH_DATA_SAVE_DIR__"
+read_openmx_path: "__READ_OPENMX_PATH__"
+max_SCF_skip: 200
+format: "__GRAPH_DATA_FORMAT__"
+scfout_paths: "__SCFOUT_GLOB__"
+dat_file_name: "__SYSTEM_NAME__.dat"
+std_file_name: "__SYSTEM_NAME__.std"
+scfout_file_name: "__SCFOUT_FILE_NAME__"
+soc_switch: __SOC_SWITCH__

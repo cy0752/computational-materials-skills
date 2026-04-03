@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenMX Data Processing"
+  short_description: "Prepare split-local OpenMX inputs and hand submission to the remote submit template"
+  default_prompt: "Use $openmx-data-processing to prepare split-local OpenMX preprocessing inputs, then use $remote-task-submit for the actual cluster-specific submission."

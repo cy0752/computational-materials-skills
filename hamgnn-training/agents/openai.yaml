@@ -1,0 +1,4 @@
+interface:
+  display_name: "hamgnn training"
+  short_description: "submit hamgnn training job"
+  default_prompt: "Use $hamgnn-training to render the training config, then hand the runnable remote command to $remote-task-submit so the user can customize scheduler-specific submission details."
