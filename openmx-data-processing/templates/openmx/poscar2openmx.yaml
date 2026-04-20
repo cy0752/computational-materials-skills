@@ -10,7 +10,7 @@ basic_command: |+
 
   System.CurrrentDirectory         ./
   System.Name                     __SYSTEM_NAME__
-  DATA.PATH           __OPENMX_DATA_PATH__
+  DATA.PATH           /root/DFT_DATA19
   level.of.stdout                   1
   level.of.fileout                  1
   HS.fileout                   on

@@ -36,31 +36,12 @@ if [[ -z "${workdir}" || -z "${config}" ]]; then
     exit 1
 fi
 
-activate_conda_env() {
-    local env_name="$1"
-    local conda_base="${CONDA_BASE:-}"
-    local conda_sh=""
-
-    if [[ -n "${conda_base}" ]] && [[ -f "${conda_base}/etc/profile.d/conda.sh" ]]; then
-        conda_sh="${conda_base}/etc/profile.d/conda.sh"
-    elif command -v conda >/dev/null 2>&1; then
-        conda_base="$(conda info --base 2>/dev/null || true)"
-        if [[ -n "${conda_base}" ]] && [[ -f "${conda_base}/etc/profile.d/conda.sh" ]]; then
-            conda_sh="${conda_base}/etc/profile.d/conda.sh"
-        fi
-    fi
-
-    if [[ -z "${conda_sh}" ]]; then
-        echo "Error: unable to locate conda.sh. Set CONDA_BASE to your conda installation root." >&2
-        exit 1
-    fi
-
-    # shellcheck disable=SC1090
-    source "${conda_sh}"
-    conda activate "${env_name}"
-}
-
-activate_conda_env "${HAMGNN_CONDA_ENV:-HamGNN}"
+if [ -f "/root/miniconda3/etc/profile.d/conda.sh" ]; then
+    source /root/miniconda3/etc/profile.d/conda.sh
+    conda activate "${HAMGNN_CONDA_ENV:-HamGNN}"
+else
+    source /root/miniconda3/bin/activate "${HAMGNN_CONDA_ENV:-HamGNN}"
+fi
 
 cd "${workdir}"
 HamGNN2.0 --config "${config}" > inference.log 2>&1

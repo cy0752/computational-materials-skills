@@ -1,36 +1,48 @@
 ---
 name: remote-task-submit
-description: Public placeholder skill for remote job submission. Customize this directory for your own scheduler, cluster, or server-side launcher.
+description: Legacy compatibility wrapper for Inspire remote job submission. Redirect to `inspire-cli-training-submit` for the canonical generic submission flow.
 ---
 
 # Remote Task Submit
 
-## Purpose
+## Status
 
-`remote-task-submit` is the repository's single cluster-specific submission adapter.
+`remote-task-submit` is a legacy compatibility skill.
 
-Use it whenever a workflow stage needs to launch work on a remote machine, queue, or scheduler.
-Keep site-specific submission details here instead of scattering them across workflow skills.
-It must remain independently usable even when no higher-level pipeline skill is involved.
-
-## What To Customize
-
-1. Replace the command templates in `scripts/submit_batch_job.py` and `scripts/submit_hpc_job.py`.
-2. Replace placeholder values such as `<submit-binary>`, `<queue>`, `<account>`, `<resource-profile>`, and `<container-image>`.
-3. Add or remove arguments so they match the user's scheduler, launcher, or in-house platform.
-4. Keep credentials, internal hostnames, machine-room names, and live account identifiers out of this repository.
+Use `inspire-cli-training-submit` as the canonical generic Inspire submission base for GPU, CPU, and HPC jobs.
+Do not define independent submission defaults, resource policies, or image-selection rules here.
 
 ## Compatibility Rule
 
-When another skill says to use `remote-task-submit`, interpret that as:
+When an older skill or prompt says to use `remote-task-submit`, reinterpret that as:
 
-1. Prepare the runnable stage command in the workflow-specific skill.
-2. Hand the final remote submission shape to `remote-task-submit`.
-3. Keep queue, account, resource, image, launcher, and site defaults here.
+- use `inspire-cli-training-submit` for the generic Inspire CLI/helper workflow
+- use any loaded workflow-specific submit skill for canonical resource defaults
+  - `inspire-openmx-submit` for recognized OpenMX jobs
+  - `inspire-vasp-submit` for recognized VASP jobs
+  - `inspire-pasp-submit` for recognized PASP jobs
+  - `inspire-hamgnn-submit` for recognized HamGNN jobs
+
+## What This Skill Still Means
+
+Use this skill name only as a compatibility alias when existing prompts still reference it.
+It does not override the canonical defaults from workflow-specific submit skills.
+It does not replace `inspire-cli-training-submit`.
+
+## Delegation Rule
+
+For generic submission or debugging:
+
+- load and follow `inspire-cli-training-submit`
+
+For recognized workflow submissions:
+
+- load and follow the workflow-specific submit skill first
+- use `inspire-cli-training-submit` as the underlying execution flow only through that workflow skill
 
 ## Guardrails
 
-- Do not hardcode private endpoints, hostnames, machine-room names, account names, or cluster-only paths here.
-- Do not store passwords, tokens, browser sessions, or compiled caches in this skill.
-- Prefer documented placeholders or environment variables for anything site-specific.
-- Treat the helper scripts in `scripts/` as starter templates, not as universally correct commands.
+- Do not introduce a second generic Inspire submission policy here.
+- Do not hardcode workspace, compute group, spec, or image defaults here.
+- Do not let older prompts use this skill to bypass canonical workflow-specific defaults.
+- If a downstream skill still references `remote-task-submit`, preserve backward compatibility by routing to the canonical submit stack rather than inventing new defaults.

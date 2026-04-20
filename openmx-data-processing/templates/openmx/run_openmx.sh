@@ -5,12 +5,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SYSTEM_NAME="${SYSTEM_NAME:-__SYSTEM_NAME__}"
 INPUT_ROOT="${INPUT_ROOT:-__OPENMX_INPUT_ROOT__}"
 DATASET_ROOT="${DATASET_ROOT:-__OPENMX_DATASET_ROOT__}"
-OPENMX_BIN="${OPENMX_BIN:-openmx}"
-OPENMX_POSTPROCESS_BIN="${OPENMX_POSTPROCESS_BIN:-openmx_postprocess}"
+OPENMX_BIN="${OPENMX_BIN:-/root/openmx}"
+OPENMX_POSTPROCESS_BIN="${OPENMX_POSTPROCESS_BIN:-/root/openmx_postprocess}"
 PARALLEL_BIN="${PARALLEL_BIN:-parallel}"
 TASKSET_BIN="${TASKSET_BIN:-taskset}"
 OPENMX_CONDA_ENV="${OPENMX_CONDA_ENV:-OpenMX}"
-ONEAPI_SETVARS="${ONEAPI_SETVARS:-}"
 DEFAULT_OMP_THREADS=2
 DEFAULT_OPENMX_TASKS=16
 DEFAULT_OPENMX_CPUS_PER_TASK=2
@@ -23,37 +22,15 @@ PROGRESS_DIR="${LOG_DIR}/progress_${RUN_TIMESTAMP}"
 mkdir -p "${LOG_DIR}" "${PROGRESS_DIR}" "${DATASET_ROOT}"
 exec > >(tee -a "${LOG_FILE}") 2>&1
 
-activate_conda_env() {
-    local env_name="$1"
-    local conda_base="${CONDA_BASE:-}"
-    local conda_sh=""
-
-    if [[ -n "${conda_base}" ]] && [[ -f "${conda_base}/etc/profile.d/conda.sh" ]]; then
-        conda_sh="${conda_base}/etc/profile.d/conda.sh"
-    elif command -v conda >/dev/null 2>&1; then
-        conda_base="$(conda info --base 2>/dev/null || true)"
-        if [[ -n "${conda_base}" ]] && [[ -f "${conda_base}/etc/profile.d/conda.sh" ]]; then
-            conda_sh="${conda_base}/etc/profile.d/conda.sh"
-        fi
-    fi
-
-    if [[ -z "${conda_sh}" ]]; then
-        echo "Error: unable to locate conda.sh. Set CONDA_BASE to your conda installation root." >&2
-        exit 1
-    fi
-
-    # shellcheck disable=SC1090
-    source "${conda_sh}"
-    conda activate "${env_name}"
-}
-
-activate_conda_env "${OPENMX_CONDA_ENV}"
+if [ -f "/root/miniconda3/etc/profile.d/conda.sh" ]; then
+    source /root/miniconda3/etc/profile.d/conda.sh
+    conda activate "${OPENMX_CONDA_ENV}"
+else
+    source /root/miniconda3/bin/activate "${OPENMX_CONDA_ENV}"
+fi
 
 set +u
-if [[ -n "${ONEAPI_SETVARS}" ]] && [[ -f "${ONEAPI_SETVARS}" ]]; then
-    # shellcheck disable=SC1090
-    source "${ONEAPI_SETVARS}" >/dev/null 2>&1
-fi
+source /opt/intel/oneapi/setvars.sh >/dev/null 2>&1
 set -u
 ulimit -s unlimited
 export OCL_ICD_FILENAMES="${OCL_ICD_FILENAMES:-}"
@@ -62,26 +39,10 @@ export I_MPI_FABRICS="${I_MPI_FABRICS:-shm:ofi}"
 export I_MPI_OFI_PROVIDER="${I_MPI_OFI_PROVIDER:-tcp}"
 unset UCX_TLS
 unset UCX_NET_DEVICES
-lib_paths=()
-if [[ -n "${MKLROOT:-}" ]]; then
-    lib_paths+=("${MKLROOT}/lib/intel64")
-fi
-if [[ -n "${I_MPI_ROOT:-}" ]]; then
-    lib_paths+=("${I_MPI_ROOT}/lib/release" "${I_MPI_ROOT}/lib")
-fi
-if [[ -n "${ONEAPI_COMPILER_LIB:-}" ]]; then
-    lib_paths+=("${ONEAPI_COMPILER_LIB}")
-fi
-if [[ -n "${GSL_LIB_PATH:-}" ]]; then
-    lib_paths+=("${GSL_LIB_PATH}")
-fi
-if [[ -n "${CONDA_PREFIX:-}" ]]; then
-    lib_paths+=("${CONDA_PREFIX}/lib")
-    export PATH="${CONDA_PREFIX}/bin:${PATH}"
-fi
-if (( ${#lib_paths[@]} > 0 )); then
-    export LD_LIBRARY_PATH="$(IFS=:; echo "${lib_paths[*]}")${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-fi
+export MKLROOT="${MKLROOT:-/opt/intel/oneapi/mkl/latest}"
+export I_MPI_ROOT="${I_MPI_ROOT:-/opt/intel/oneapi/mpi/latest}"
+export LD_LIBRARY_PATH="${MKLROOT}/lib/intel64:${I_MPI_ROOT}/lib/release:${I_MPI_ROOT}/lib:${GSL_LIB_PATH:-/inspire/qb-ilm/project/cq-scientific-cooperation-zone/public/openmx3.9/gsl/lib}:/opt/intel/oneapi/compiler/2025.3/lib:/root/miniconda3/envs/${OPENMX_CONDA_ENV}/lib:${LD_LIBRARY_PATH:-}"
+export PATH="/root/miniconda3/envs/${OPENMX_CONDA_ENV}/bin:${PATH}"
 export OMP_PROC_BIND="${OMP_PROC_BIND:-close}"
 export OMP_PLACES="${OMP_PLACES:-cores}"
 

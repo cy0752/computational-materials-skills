@@ -1,126 +1,145 @@
-# Remote Submit Template Reference
+# Inspire CLI Submit Reference
 
-## Current State
+## Current local defaults
 
-- This directory is a public scaffold, not a site-specific scheduler integration.
+- Conversation and edits usually happen on a CPU cluster shell.
+- GPU work is launched through native `inspire job create` or `inspire run`.
 - In command examples below, `<skill-dir>` means the directory containing this skill.
-- Ordinary batch workloads should use:
-  - `<skill-dir>/scripts/submit_batch_job.py`
-- MPI or multi-node style workloads should use:
-  - `<skill-dir>/scripts/submit_hpc_job.py`
-- The bundled scripts are intentionally generic. They render a command template and only execute it after the user replaces the public placeholders.
-- The recommended customization points are:
-  - edit the `DEFAULT_*_TEMPLATE` constant inside the script
-  - or set `REMOTE_BATCH_SUBMIT_TEMPLATE` / `REMOTE_HPC_SUBMIT_TEMPLATE`
-- Run every new template with `--dry-run` before using it against a real cluster.
-- Keep credentials outside the repository. The placeholder scripts do not manage login flows, browser sessions, or token refresh.
+- CPU-only training is launched through the bundled helper script:
+  - `<skill-dir>/scripts/inspire_cpu_job_create.py`
+- HPC jobs are launched through the bundled helper script:
+  - `<skill-dir>/scripts/inspire_hpc_job_create.py`
+- Native `inspire` does not expose a first-class HPC create/status command in this setup.
+- In this environment, the local CLI has been patched to support `job.location` / `INSP_LOCATION`.
+- The helper scripts clear `http_proxy` / `https_proxy` by default unless `--keep-proxy` is passed.
+- The helper scripts discover the installed `inspire` package from the active Python environment, skill-local vendor directories, `INSPIRE_SITE_PACKAGES` / `INSPIRE_PYTHON_SITE_PACKAGES`, `INSPIRE_CLI_HOME`, and paths derived from `INSPIRE_BIN`, `command -v inspire`, `~/.local/bin/inspire`, or `~/bin/inspire`.
+- The helper scripts now resolve browser-login credentials in this order:
+  - `--web-password`
+  - `INSPIRE_WEB_PASSWORD`
+  - `web_password` from the same Inspire account entry used by native CLI
+  - `config.password` as the final fallback
+- The current project config sets:
+  - default job location: `H200-3号机房`
+- The local CLI fallback for unspecified images is:
+  - image: `ngc-pytorch:24.05-cuda12.4-py3`
+  - image type: `SOURCE_OFFICIAL`
 
-## Baseline Commands
+## Baseline commands
 
-Render a batch submission command without executing it:
-
-```bash
-python3 <skill-dir>/scripts/submit_batch_job.py \
-  --name "<job-name>" \
-  --workdir "<shared-workdir>" \
-  --queue "<queue>" \
-  --resource-profile "<resource-profile>" \
-  --command "<start-command>" \
-  --dry-run
-```
-
-Render an HPC submission command without executing it:
+Submit a GPU training job with project defaults:
 
 ```bash
-python3 <skill-dir>/scripts/submit_hpc_job.py \
-  --name "<job-name>" \
-  --workdir "<shared-workdir>" \
-  --queue "<queue>" \
-  --nodes 2 \
-  --tasks 64 \
-  --cpus-per-task 2 \
-  --command "<start-command>" \
-  --dry-run
+inspire job create -p cq --name "<job-name>" --resource "4xH200" --command "<start-command>"
 ```
 
-Print the built-in placeholder template before editing it:
+Force a GPU training job to a specific machine room:
 
 ```bash
-python3 <skill-dir>/scripts/submit_batch_job.py --name x --command y --print-template
-python3 <skill-dir>/scripts/submit_hpc_job.py --name x --command y --print-template
+inspire job create -p cq --location "H200-3号机房" --name "<job-name>" --resource "4xH200" --command "<start-command>"
 ```
 
-Set a site-specific batch template through an environment variable:
+Submit a CPU training job through the helper script:
 
 ```bash
-export REMOTE_BATCH_SUBMIT_TEMPLATE='<submit-binary> --job-name {name_quoted} --workdir {workdir_quoted} --queue {queue_quoted} --resource-profile {resource_profile_quoted} --command {command_quoted}'
+python3 <skill-dir>/scripts/inspire_cpu_job_create.py --name "<job-name>" --command "<start-command>"
 ```
 
-Set a site-specific HPC template through an environment variable:
+Submit a CPU training job and override the browser password only for that command:
 
 ```bash
-export REMOTE_HPC_SUBMIT_TEMPLATE='<submit-binary> --job-name {name_quoted} --workdir {workdir_quoted} --queue {queue_quoted} --nodes {nodes} --tasks {tasks} --cpus-per-task {cpus_per_task} --command {command_quoted}'
+INSPIRE_WEB_PASSWORD="<password>" python3 <skill-dir>/scripts/inspire_cpu_job_create.py --name "<job-name>" --command "<start-command>"
 ```
 
-## Available Placeholders
+Submit an HPC job through the helper script:
 
-The helper scripts expose both raw and shell-quoted values for common fields:
+```bash
+python3 <skill-dir>/scripts/inspire_hpc_job_create.py --name "<job-name>" --command "<start-command>"
+```
 
-- `{name}` / `{name_quoted}`
-- `{command}` / `{command_quoted}`
-- `{workdir}` / `{workdir_quoted}`
-- `{queue}` / `{queue_quoted}`
-- `{account}` / `{account_quoted}`
-- `{resource_profile}` / `{resource_profile_quoted}`
-- `{image}` / `{image_quoted}`
-- `{nodes}` / `{nodes_quoted}`
-- `{tasks}` / `{tasks_quoted}`
-- `{cpus_per_task}` / `{cpus_per_task_quoted}`
-- `{memory}` / `{memory_quoted}`
-- `{time_limit}` / `{time_limit_quoted}`
-- `{exports}` / `{export_prefix}`
-- `{extra_args}`
+Force a specific HPC location:
 
-You can also add your own placeholders with repeated `--extra key=value`.
+```bash
+python3 <skill-dir>/scripts/inspire_hpc_job_create.py --location "高性能计算" --name "<job-name>" --command "<start-command>"
+```
 
-## Common Failure Patterns
+Inspect resolved job config:
 
-### The script says the template still contains public placeholders
+```bash
+inspire config show --filter Job
+inspire config show --filter Workspaces
+```
+
+Retry native CLI commands without shell proxies:
+
+```bash
+env -u http_proxy -u https_proxy inspire resources list
+env -u http_proxy -u https_proxy inspire job create -p cq --name "<job-name>" --resource "4xH200" --command "<start-command>"
+```
+
+## Common failure patterns
+
+### `Connection error, retrying...` or `SSLEOFError ... UNEXPECTED_EOF_WHILE_READING`
 
 Meaning:
-- The command template still contains markers such as `<submit-binary>` or `<scheduler-arguments>`.
+- Native CLI is going through an inherited shell proxy that breaks Inspire HTTPS requests.
 
 Usual fixes:
-- Edit the default template in the script.
-- Or set `REMOTE_BATCH_SUBMIT_TEMPLATE` / `REMOTE_HPC_SUBMIT_TEMPLATE`.
-- Keep using `--dry-run` until the rendered command contains only real site-specific values.
+- Inspect `http_proxy` / `https_proxy`.
+- Retry native CLI commands with `env -u http_proxy -u https_proxy ...`.
+- Keep the helper-script default of clearing proxies unless you intentionally need proxy routing.
 
-### The scheduler rejects queue, account, resource, or image flags
+### `logic_compute_group ... does not belong to workspace ...`
 
 Meaning:
-- The placeholder template does not match the real CLI syntax used by the target cluster.
+- The command resolved one workspace, but the selected compute group belongs to another.
 
 Usual fixes:
-- Rename or remove unsupported flags in the template.
-- Add site-specific placeholders with `--extra key=value`.
-- If the CLI needs multiple commands, wrap them in a shell script and point `--command` at that script instead.
+- Check `inspire config show --filter Workspaces`.
+- Prefer an explicit `--location` in the intended workspace.
+- Pass `--workspace-id` only if the directory default is wrong or the user wants a different workspace.
 
-### The remote workdir, image, or input path is not visible on the cluster
+### `no permission to use private image ...`
 
 Meaning:
-- The submit host cannot access the path or runtime artifact passed into the rendered command.
+- The submission is trying to use a private image that the account cannot access.
 
 Usual fixes:
-- Replace local-only paths with cluster-visible paths.
-- Add any required staging, copy, or mount logic outside this public template.
-- Document the expected shared filesystem layout in a local site guide rather than hardcoding it here.
+- Omit `--image` and let the patched official fallback apply.
+- Or set `job.image` / `--image` to a known accessible image.
 
-### The command runs locally instead of through the scheduler
+### `Session expired, re-authenticating...`
 
 Meaning:
-- The template does not invoke the real submit binary yet.
+- The cached web session expired and the CLI is refreshing auth.
 
 Usual fixes:
-- Replace `<submit-binary>` with the actual scheduler or platform command.
-- Verify the rendered command with `--dry-run`.
-- Do not remove the submission wrapper unless local execution is intentionally desired.
+- Re-run once after refresh.
+- Only debug credentials if the next API call still fails.
+
+### `Login did not complete; check credentials` or CAS page says `Wrong password`
+
+Meaning:
+- Browser-based login used by the helper scripts failed against the current account password.
+
+Usual fixes:
+- Update the password in the same account entry used by native CLI, typically `/root/.config/inspire/config.toml`.
+- If token auth and browser auth use different working credentials, keep `password` for native CLI and `web_password` for helper scripts in that same account entry.
+- Use `INSPIRE_WEB_PASSWORD` or `--web-password` only as a temporary override while validating a new password.
+
+### `No CPU resource specs returned for the selected compute group`
+
+Meaning:
+- The selected CPU workspace / compute group exists, but the platform returned no schedulable CPU training spec for it.
+
+Usual fixes:
+- Choose a different CPU workspace or `--location`.
+- Pass an explicit `--spec-id` if the correct CPU spec is known.
+- Treat this as a resource-discovery issue, not an auth failure, if browser login already succeeded.
+
+## Working assumptions for this setup
+
+- Do not assume `workspace`, `location`, and `image` are coupled; inspect each separately.
+- Do not assume inherited shell proxy variables are safe for Inspire traffic.
+- Prefer account-scoped password fields over ad hoc shell overrides. Native CLI should read `password`; helper scripts should read `web_password` when present, otherwise fall back to `password`.
+- Prefer project config defaults over one-off CLI flags when the user wants repeatable behavior.
+- If the user asks to change the default machine room or fallback image, patch the local CLI or `.inspire/config.toml` explicitly instead of relying on memory.
