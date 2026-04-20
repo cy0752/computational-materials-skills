@@ -1,0 +1,4 @@
+interface:
+  display_name: "structure-openmx-hamgnn-training-pipeline"
+  short_description: "build dataset and train HamGNN from structure"
+  default_prompt: "Use $structure-openmx-hamgnn-training-pipeline with a structure file path to generate perturbed CIF datasets, run DFT preprocessing (OpenMX by default, ABACUS when explicitly requested) in execution_mode=submit|local, and train HamGNN up to the final checkpoint."

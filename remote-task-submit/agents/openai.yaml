@@ -1,4 +1,4 @@
 interface:
   display_name: "Remote Task Submit"
-  short_description: "Public template for customizing remote job submission"
-  default_prompt: "Use $remote-task-submit as the cluster-specific submission adapter. Prepare the runnable workflow command first, then customize the scripts and placeholders in this skill to match the user's scheduler or remote server."
+  short_description: "Legacy alias for the canonical Inspire submit workflow"
+  default_prompt: "Use $inspire-cli-training-submit as the canonical generic Inspire submission flow. If the task matches a workflow-specific submit skill such as $inspire-openmx-submit or $inspire-hamgnn-submit, follow that skill's canonical defaults instead of inventing new ones."

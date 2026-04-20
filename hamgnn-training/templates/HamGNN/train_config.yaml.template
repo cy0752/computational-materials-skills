@@ -39,7 +39,7 @@ output_nets:
     calculate_band_energy: false
     collinear_spin: __COLLINEAR_SPIN__
     ham_only: true
-    ham_type: openmx
+    ham_type: __HAM_TYPE__
     k_path: null
     minMagneticMoment: 0.5
     nao_max: __NAO_MAX__
@@ -76,7 +76,7 @@ representation_nets:
     - 64
     - 64
     radius_scale: 1.01
-    radius_type: openmx
+    radius_type: __HAM_TYPE__
     rbf_func: bessel
     set_features: true
     u_max: 8.0

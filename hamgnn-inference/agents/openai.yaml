@@ -1,4 +1,4 @@
 interface:
   display_name: "hamgnn inference"
   short_description: "submit hamgnn inference job"
-  default_prompt: "Use $hamgnn-inference to render the inference config, then hand the runnable remote command to $remote-task-submit so the user can customize scheduler-specific submission details."
+  default_prompt: "Use $hamgnn-inference to render the inference config and submit the HamGNN job through $inspire-hamgnn-submit."

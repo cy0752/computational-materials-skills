@@ -1,0 +1,43 @@
+system_name: "ABACUS"
+
+# 可以是一个字符串，也可以是字符串列表。
+# 推荐填写 CIF glob，例如: "/data/cif/*.cif"
+structure_glob: "__CIF_GLOB__"
+
+# 生成的 ABACUS 计算目录根路径。
+# 每个结构会生成一个子目录，目录内包含 INPUT/KPT/STRU。
+output_root: "__ABACUS_INPUT_ROOT__"
+
+# 可选: index_stem | index | stem
+run_dir_naming: "index_stem"
+overwrite: false
+copy_source_file: true
+orbital_subdir_pattern: "{symbol}_DZP"
+
+# 每个原子的移动标记，按 x y z 写入 STRU。
+# 1 表示可动，0 表示固定。
+move_flags: [1, 1, 1]
+
+input:
+  calculation: scf
+  suffix: ABACUS
+  symmetry: 1
+  basis_type: lcao
+  pseudo_dir: /root/ABACUS-orbitals/SG15_v1.0/Pseudopotential
+  orbital_dir: /root/ABACUS-orbitals/SG15_v1.0/Orbitals_v2.0
+  ecutwfc: 100
+  scf_thr: 1e-7
+  scf_nmax: 200
+  cal_force: 1
+  cal_stress: 1
+  smearing_method: gauss
+  smearing_sigma: 0.002
+  mixing_type: broyden
+  mixing_beta: 0.7
+  ks_solver: scalapack_gvx
+  out_mat_hs2: 1
+
+kpt:
+  mode: Gamma
+  mesh: [4, 4, 4]
+  shift: [0, 0, 0]

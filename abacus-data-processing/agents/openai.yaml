@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABACUS Data Processing"
+  short_description: "Generate ABACUS INPUT/KPT/STRU from CIF/POSCAR with default config"
+  default_prompt: "Use $abacus-data-processing to generate per-structure ABACUS INPUT/KPT/STRU run directories from CIF/POSCAR files with default settings, then return the output root and generated folders."

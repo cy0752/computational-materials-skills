@@ -1,4 +1,4 @@
 interface:
   display_name: "hamgnn training"
-  short_description: "submit hamgnn training job"
-  default_prompt: "Use $hamgnn-training to render the training config, then hand the runnable remote command to $remote-task-submit so the user can customize scheduler-specific submission details."
+  short_description: "prepare and run hamgnn training"
+  default_prompt: "Use $hamgnn-training to render the training config, set __HAM_TYPE__ from upstream route, and run or submit HamGNN training as required."
