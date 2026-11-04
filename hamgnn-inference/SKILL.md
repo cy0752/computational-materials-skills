@@ -11,9 +11,10 @@ description: Prepare and submit HamGNN inference jobs through the canonical HamG
 4. Do not edit a shared global `HamGNN/test_config.yaml` in place.
 5. This stage consumes:
 - the trained model or checkpoint path from the training stage
-- the test `.npz` generated in the OpenMX data-processing stage
+- the test `.npz` generated in the Stage 2 DFT data-processing stage (OpenMX or ABACUS)
 - the inference config in `test_config.yaml`
 6. When the upstream pipeline already produced a dedicated test `.npz`, render the config so stage `test` consumes that entire dataset as the inference set. Do not ask HamGNN to split the external test dataset again.
-7. For ordinary HamGNN inference, render `uni_model_pkl_path: null` by default. Only populate `uni_model_pkl_path` when the user explicitly asks to load a Uni model.
-8. This stage must emit the prediction artifacts required by the band-structure plotting stage.
-9. Continue monitoring until inference is complete.
+7. The main inference config has no Uni-model option. HamGNN >= 2.3.0 moved Uni models to the separate `Uni-HamGNN` workflow; `uni_model_pkl_path` no longer exists. Do not render Uni keys in `test_config.yaml`.
+8. Render `representation_nets.HamGNN_pre.legacy_edge_update` according to the checkpoint: `true` for any checkpoint trained before the HamGNN 2.3 edge-update fix (the common case for pre-existing models), `false` only for models trained on HamGNN >= 2.3. A wrong value fails to load or silently degrades old checkpoints.
+9. This stage must emit the prediction artifacts required by the band-structure plotting stage.
+10. Continue monitoring until inference is complete.

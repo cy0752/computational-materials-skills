@@ -1,5 +1,5 @@
 ---
-name: structure-openmx-hamgnn-training-pipeline
+name: structure-dft-hamgnn-training-pipeline
 description: Structure-file-driven OpenMX/ABACUS-to-HamGNN training pipeline. Use when users provide a crystal structure file such as CIF or POSCAR and want to build a perturbed CIF dataset, run DFT preprocessing (OpenMX by default, ABACUS when explicitly requested), and train a HamGNN model, stopping at the trained checkpoint.
 ---
 
@@ -24,25 +24,23 @@ Never skip, reorder, or merge stages.
 
 ## Local Environment Policy
 
-1. Before running each stage locally, first try a stage-matched conda env, then fall back to `base` if unavailable:
-- Stage 0/1 Python preprocessing: prefer `OpenMX`, fallback `base`
-- Stage 2B ABACUS local run: prefer `abacus_env`, fallback `base`
-- Stage 3 HamGNN local run: prefer `HamGNN`, fallback `base`
-2. Do not create a new local conda env unless the user explicitly asks.
-3. If local Python dependencies such as `pymatgen` or `ase` are missing, install them into the selected fallback env.
-4. In `submit` mode, remote OpenMX jobs must use the canonical OpenMX submission flow and its configured runtime environment.
-5. In `submit` mode, remote ABACUS jobs must use the canonical ABACUS submission flow and its configured runtime environment.
+1. Use the local conda env named by `HAMGNN_CONDA_ENV` (default `HamGNN`) for this pipeline's local Python stages (Stages 0 and 1). That env already provides `pymatgen` and `ase` together with the HamGNN runtime.
+2. ABACUS local runs (Stage 2B): prefer env `abacus_env`, fallback `base`. HamGNN local runs (Stage 3): prefer env `HamGNN`, fallback `base`.
+3. Do not create a new local conda env unless the user explicitly asks.
+4. If local Python dependencies such as `pymatgen` or `ase` are missing, install them into the selected fallback env.
+5. OpenMX provenance is machine-specific: this pipeline never assumes a dedicated OpenMX environment. OpenMX executables arrive via `OPENMX_BIN` / `OPENMX_POSTPROCESS_BIN` or `PATH`, and the Python that can import `DFT_interfaces` arrives via `PYTHONBIN` / `HAMGNN_ROOT`, as defined by the `openmx-data-processing` runtime contract.
+6. Remote jobs must use the repository's canonical submission flow. Do not hardcode site-specific remote runtime choices in this pipeline skill.
 
 ## Stage 0: Normalize Structure Input to Primitive CIF
 
 1. Accept a user-specified structure file such as `CIF`, `POSCAR`, `CONTCAR`, `vasp`, or another periodic structure format readable by `pymatgen` or `ASE`.
-2. Use local conda env `OpenMX` when available, otherwise `base`, and run `<skill_root>/scripts/structure_to_cif.py`.
+2. Use the local conda env named by `HAMGNN_CONDA_ENV` (default `HamGNN`) and `<skill_root>/scripts/structure_to_cif.py`.
 3. Convert the input structure into a primitive-cell CIF and write it under `<work_root>/<target_dir>/structure/primitive.cif`.
 4. Preserve the original input structure file unchanged.
 5. Run:
 
 ```bash
-conda run -n <stage01_env> python <skill_root>/scripts/structure_to_cif.py \
+conda run -n "${HAMGNN_CONDA_ENV:-HamGNN}" python <skill_root>/scripts/structure_to_cif.py \
   --input <structure_path> \
   --output <work_root>/<target_dir>/structure/primitive.cif \
   --primitive
@@ -52,14 +50,14 @@ conda run -n <stage01_env> python <skill_root>/scripts/structure_to_cif.py \
 
 ## Stage 1: Generate Perturbed CIF Dataset
 
-1. Use local conda env `OpenMX` when available, otherwise `base`, and run `<skill_root>/scripts/prepare_perturbed_dataset.py`.
+1. Use the local conda env named by `HAMGNN_CONDA_ENV` (default `HamGNN`) and run `<skill_root>/scripts/prepare_perturbed_dataset.py`.
 2. Use the Stage 0 CIF as the only structural input source for this stage.
 3. Keep the train/test split ratio logic, but do not silently choose or change the total number of perturbed structures without discussing it with the user first.
 4. Apply a hard perturbation cap of `0.06 Å` per atom via `--max-displacement`.
 5. Run:
 
 ```bash
-conda run -n <stage01_env> python <skill_root>/scripts/prepare_perturbed_dataset.py \
+conda run -n "${HAMGNN_CONDA_ENV:-HamGNN}" python <skill_root>/scripts/prepare_perturbed_dataset.py \
   --cif <stage0_cif_path> \
   --workdir <work_root>/<target_dir>/crystal_pipeline \
   --num-perturb <num_perturb> \
@@ -162,10 +160,11 @@ conda run -n <stage2_graph_env> python <abacus_skill_root>/templates/abacus/grap
 - OpenMX route -> `openmx`
 - ABACUS route -> `abacus`
 7. Apply the same rendered `__HAM_TYPE__` value to both `ham_type` and `radius_type` in the rendered training config.
-8. Ordinary HamGNN training must keep `uni_model_pkl_path: null` unless the user explicitly asks to load a Uni model.
-9. If the upstream Stage 2 dataset includes `H0`, keep `add_H0: true` in the rendered config.
-10. If Stage 2 produced an external test `.npz`, do not allocate an additional internal HamGNN test split from the training `.npz`.
-11. Stage 3 output: the trained model or checkpoint path.
+8. Do not render Uni-model keys into the training config: HamGNN >= 2.3.0 removed `uni_model_pkl_path` from the main config (Uni models live in the separate `Uni-HamGNN` workflow with `Uni-HamiltonianPredictor.py` + `Input.yaml`). If the user asks for a Uni model, treat it as a dedicated out-of-band flow.
+9. Render `representation_nets.HamGNN_pre.legacy_edge_update: false` for fresh training; set it to `true` only when resuming from a checkpoint trained before the HamGNN 2.3 edge-update fix.
+10. If the upstream Stage 2 dataset includes `H0`, keep `add_H0: true` in the rendered config.
+11. If Stage 2 produced an external test `.npz`, do not allocate an additional internal HamGNN test split from the training `.npz`.
+12. Stage 3 output: the trained model or checkpoint path.
 
 ## Final Deliverables
 

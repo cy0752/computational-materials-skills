@@ -12,8 +12,19 @@ description: Prepare split-local OpenMX preprocessing inputs and submit recogniz
 - `graph_data_gen.yaml`
 - `dat_gen.sh`
 - `graphgen.sh`
+No HamGNN Python scripts are copied into the workdir. `dat_gen.sh` and `graphgen.sh` run the packaged modules via `python -m DFT_interfaces.openmx.poscar2openmx` / `python -m DFT_interfaces.openmx.graph_data_gen` (HamGNN >= 2.3.0 package layout).
 3. Render the copied templates into the split-local workdir. Do not edit the skill-owned templates in place.
 4. In `run_openmx.sh`, only render split-specific values such as `SYSTEM_NAME`, `INPUT_ROOT`, and `DATASET_ROOT`. Preserve the runtime environment contract.
+
+### Runtime contract (machine-specific, not assumed by this skill)
+
+This skill does not assume a dedicated conda environment or any particular provenance of the tools. The caller must guarantee, on the execution machine:
+
+- `PYTHONBIN` (default `python`): an interpreter where `DFT_interfaces` is importable — true when HamGNN is pip-installed, or when `HAMGNN_ROOT` points at a HamGNN source checkout (exported to `PYTHONPATH` by the scripts).
+- OpenMX executables `openmx` and `openmx_postprocess` are runnable: on `PATH`, or provided via `OPENMX_BIN` / `OPENMX_POSTPROCESS_BIN` absolute paths.
+- Optional `OPENMX_CONDA_ENV` activates a conda env inside `run_openmx.sh` only when explicitly set; `ONEAPI_SETVARS`, `MKLROOT`, `GSL_LIB_PATH` remain optional site hooks.
+- `graph_data_gen.yaml.nao_max` accepts only `14`, `19`, or `26`.
+- Generation writes `graph_data.npz`; reading `npz` / `lmdb` / `auto` via `dataset_params.data_format` is unaffected.
 5. Use `inspire-openmx-submit` for the actual OpenMX submission. `inspire-openmx-submit` is the authority for workspace, compute group, spec, image, and HPC submission shape.
 6. Default split-local execution policy:
 - default OpenMX task budget is `tasks=16`, `cpus-per-task=2`
