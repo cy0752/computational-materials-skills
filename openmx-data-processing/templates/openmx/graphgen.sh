@@ -1,32 +1,19 @@
 #!/bin/bash
 set -euo pipefail
 
-activate_conda_env() {
-    local env_name="$1"
-    local conda_base="${CONDA_BASE:-}"
-    local conda_sh=""
+# Runtime contract (machine-specific, supplied by the caller):
+# - PYTHONBIN: a Python interpreter where `DFT_interfaces` is importable and
+#   torch/torch_geometric are available.
+#   That is true when HamGNN is pip-installed, or when HAMGNN_ROOT points at a
+#   HamGNN source checkout (exported onto PYTHONPATH below).
+# - This skill does not assume any dedicated conda environment.
 
-    if [[ -n "${conda_base}" ]] && [[ -f "${conda_base}/etc/profile.d/conda.sh" ]]; then
-        conda_sh="${conda_base}/etc/profile.d/conda.sh"
-    elif command -v conda >/dev/null 2>&1; then
-        conda_base="$(conda info --base 2>/dev/null || true)"
-        if [[ -n "${conda_base}" ]] && [[ -f "${conda_base}/etc/profile.d/conda.sh" ]]; then
-            conda_sh="${conda_base}/etc/profile.d/conda.sh"
-        fi
-    fi
-
-    if [[ -z "${conda_sh}" ]]; then
-        echo "Error: unable to locate conda.sh. Set CONDA_BASE to your conda installation root." >&2
-        exit 1
-    fi
-
-    # shellcheck disable=SC1090
-    source "${conda_sh}"
-    conda activate "${env_name}"
-}
-
-activate_conda_env "${OPENMX_CONDA_ENV:-OpenMX}"
+PYTHONBIN="${PYTHONBIN:-python}"
+if [[ -n "${HAMGNN_ROOT:-}" ]]; then
+    export PYTHONPATH="${HAMGNN_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
+fi
 
 mkdir -p logs/graphgen
-python graph_data_gen.py --config "${GRAPH_DATA_GEN_CONFIG:-graph_data_gen.yaml}" \
+"${PYTHONBIN}" -m DFT_interfaces.openmx.graph_data_gen \
+    --config "${GRAPH_DATA_GEN_CONFIG:-graph_data_gen.yaml}" \
     > logs/graphgen/graphgen.out 2>&1

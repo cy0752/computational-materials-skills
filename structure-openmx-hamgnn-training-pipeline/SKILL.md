@@ -23,10 +23,10 @@ All child skills used by this pipeline must also remain independently usable out
 
 ## Local Environment Policy
 
-1. Prefer local conda env `base` for this pipeline's local Python stages.
-2. Do not create a new local conda env unless the user explicitly asks.
-3. If local Python dependencies such as `pymatgen` or `ase` are missing, install them into `base`.
-4. Remote OpenMX jobs must use the repository's customizable remote submission flow. Do not hardcode site-specific remote runtime choices in this pipeline skill.
+1. Use the local conda env named by `HAMGNN_CONDA_ENV` (default `HamGNN`) for this pipeline's local Python stages (Stages 0 and 1). That env already provides `pymatgen` and `ase` together with the HamGNN runtime.
+2. Do not create a new local conda env unless the user explicitly asks, and do not require a separate `base` env.
+3. OpenMX provenance is machine-specific: this pipeline never assumes a dedicated OpenMX environment. OpenMX executables arrive via `OPENMX_BIN` / `OPENMX_POSTPROCESS_BIN` or `PATH`, and the Python that can import `DFT_interfaces` arrives via `PYTHONBIN` / `HAMGNN_ROOT`, as defined by the `openmx-data-processing` runtime contract.
+4. Remote jobs must use the repository's customizable remote submission flow. Do not hardcode site-specific remote runtime choices in this pipeline skill.
 
 ## Stage 0: Normalize Structure Input to Primitive CIF
 
@@ -37,7 +37,7 @@ All child skills used by this pipeline must also remain independently usable out
 5. Run:
 
 ```bash
-conda run -n base python <skill_root>/scripts/structure_to_cif.py \
+conda run -n "${HAMGNN_CONDA_ENV:-HamGNN}" python <skill_root>/scripts/structure_to_cif.py \
   --input <structure_path> \
   --output <work_root>/<target_dir>/structure/primitive.cif \
   --primitive
@@ -54,7 +54,7 @@ conda run -n base python <skill_root>/scripts/structure_to_cif.py \
 5. Run:
 
 ```bash
-conda run -n base python <skill_root>/scripts/prepare_perturbed_dataset.py \
+conda run -n "${HAMGNN_CONDA_ENV:-HamGNN}" python <skill_root>/scripts/prepare_perturbed_dataset.py \
   --cif <stage0_cif_path> \
   --workdir <work_root>/<target_dir>/crystal_pipeline \
   --num-perturb <num_perturb> \
@@ -103,10 +103,11 @@ conda run -n base python <skill_root>/scripts/prepare_perturbed_dataset.py \
 4. Do not hardcode site-specific HamGNN submission parameters in this pipeline skill.
 5. Render a run-local training config from `hamgnn-training/templates/HamGNN/train_config.yaml.template` into `<work_root>/<target_dir>/HamGNN/`.
 6. This stage consumes the training `.npz` from Stage 2.
-7. Ordinary HamGNN training must keep `uni_model_pkl_path: null` unless the user explicitly asks to load a Uni model.
-8. If the upstream OpenMX dataset includes `H0`, keep `add_H0: true` in the rendered config.
-9. If Stage 2 produced an external test `.npz`, do not allocate an additional internal HamGNN test split from the training `.npz`.
-10. Stage 3 output: the trained model or checkpoint path.
+7. Do not render Uni-model keys into the training config: HamGNN >= 2.3.0 removed `uni_model_pkl_path` from the main config (Uni models live in the separate `Uni-HamGNN` workflow).
+8. Render `representation_nets.HamGNN_pre.legacy_edge_update: false` for fresh training.
+9. If the upstream OpenMX dataset includes `H0`, keep `add_H0: true` in the rendered config.
+10. If Stage 2 produced an external test `.npz`, do not allocate an additional internal HamGNN test split from the training `.npz`.
+11. Stage 3 output: the trained model or checkpoint path.
 
 ## Stage 4: HamGNN Test / Inference
 
@@ -120,8 +121,9 @@ conda run -n base python <skill_root>/scripts/prepare_perturbed_dataset.py \
 - the external test `.npz` from Stage 2
 7. If Stage 2 did not produce an external test `.npz`, stop and report that the held-out test stage cannot run. Do not silently reuse the training `.npz` as the external test set.
 8. Render the config so HamGNN runs with `stage: test` against the full external test `.npz`. Do not ask HamGNN to resplit that dataset internally.
-9. Continue monitoring until inference is complete.
-10. Stage 4 outputs:
+9. Render `representation_nets.HamGNN_pre.legacy_edge_update` per the checkpoint: `true` for checkpoints trained before the HamGNN 2.3 edge-update fix, `false` for models trained on HamGNN >= 2.3.
+10. Continue monitoring until inference is complete.
+11. Stage 4 outputs:
 - the rendered inference config path
 - the inference submission record or job id summary
 - prediction artifacts and test metrics emitted by HamGNN

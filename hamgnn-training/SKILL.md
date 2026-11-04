@@ -25,6 +25,7 @@ Minimum standalone inputs:
 4. Do not edit a shared global `HamGNN/train_config.yaml` in place.
 5. When the input is a dedicated training `.npz`, render the config so it only creates an internal train/validation split inside that training dataset. Do not allocate an extra internal test split from the training `.npz`.
 6. This stage consumes a training `.npz` or equivalent processed graph dataset. That dataset may come from `openmx-data-processing` or from an external preprocessing flow supplied by the user.
-7. For ordinary HamGNN training, render `uni_model_pkl_path: null` by default. Only populate `uni_model_pkl_path` when the user explicitly asks to load a Uni model.
-8. This stage must emit the trained model or checkpoint path required by the inference stage.
-9. Continue monitoring until training is complete. Since this stage is long-running, poll every 60 minutes.
+7. The main training config has no Uni-model option. HamGNN >= 2.3.0 moved Uni models to the separate `Uni-HamGNN` workflow (`Uni-HamiltonianPredictor.py` + `Input.yaml`); `uni_model_pkl_path` no longer exists. If the user asks for a Uni model, treat it as a dedicated out-of-band flow instead of rendering Uni keys here.
+8. Keep `representation_nets.HamGNN_pre.legacy_edge_update: false` for fresh training. Set it to `true` only when resuming from a checkpoint trained before the HamGNN 2.3 edge-update fix.
+9. This stage must emit the trained model or checkpoint path required by the inference stage.
+10. Continue monitoring until training is complete. Since this stage is long-running, poll every 60 minutes.

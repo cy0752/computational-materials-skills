@@ -9,7 +9,6 @@ OPENMX_BIN="${OPENMX_BIN:-openmx}"
 OPENMX_POSTPROCESS_BIN="${OPENMX_POSTPROCESS_BIN:-openmx_postprocess}"
 PARALLEL_BIN="${PARALLEL_BIN:-parallel}"
 TASKSET_BIN="${TASKSET_BIN:-taskset}"
-OPENMX_CONDA_ENV="${OPENMX_CONDA_ENV:-OpenMX}"
 ONEAPI_SETVARS="${ONEAPI_SETVARS:-}"
 DEFAULT_OMP_THREADS=2
 DEFAULT_OPENMX_TASKS=16
@@ -47,7 +46,14 @@ activate_conda_env() {
     conda activate "${env_name}"
 }
 
-activate_conda_env "${OPENMX_CONDA_ENV}"
+# Optional conda bootstrap: activate only when OPENMX_CONDA_ENV is explicitly
+# set. This skill does not assume a dedicated environment; the caller merely
+# guarantees that ${OPENMX_BIN} and ${OPENMX_POSTPROCESS_BIN} are runnable
+# (already on PATH, or given as absolute paths). Machine-specific provenance
+# of the binaries stays outside this skill.
+if [[ -n "${OPENMX_CONDA_ENV:-}" ]]; then
+    activate_conda_env "${OPENMX_CONDA_ENV}"
+fi
 
 set +u
 if [[ -n "${ONEAPI_SETVARS}" ]] && [[ -f "${ONEAPI_SETVARS}" ]]; then
