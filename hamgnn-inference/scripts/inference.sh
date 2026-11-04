@@ -36,11 +36,29 @@ if [[ -z "${workdir}" || -z "${config}" ]]; then
     exit 1
 fi
 
-if [ -f "/root/miniconda3/etc/profile.d/conda.sh" ]; then
-    source /root/miniconda3/etc/profile.d/conda.sh
-    conda activate "${HAMGNN_CONDA_ENV:-HamGNN}"
+# Runtime contract: the HamGNN conda installation is located portably --
+# CONDA_BASE takes precedence, then `conda` on PATH. No machine-specific
+# conda path is assumed. Env name comes from HAMGNN_CONDA_ENV (default
+# HamGNN); if it is unavailable, fall back to 'base'.
+conda_sh=""
+if [[ -n "${CONDA_BASE:-}" && -f "${CONDA_BASE}/etc/profile.d/conda.sh" ]]; then
+    conda_sh="${CONDA_BASE}/etc/profile.d/conda.sh"
+elif command -v conda >/dev/null 2>&1; then
+    conda_base="$(conda info --base 2>/dev/null || true)"
+    if [[ -n "${conda_base}" && -f "${conda_base}/etc/profile.d/conda.sh" ]]; then
+        conda_sh="${conda_base}/etc/profile.d/conda.sh"
+    fi
+fi
+
+if [[ -n "${conda_sh}" ]]; then
+    # shellcheck disable=SC1090
+    source "${conda_sh}"
+    if ! conda activate "${HAMGNN_CONDA_ENV:-HamGNN}" >/dev/null 2>&1; then
+        echo "Warning: failed to activate '${HAMGNN_CONDA_ENV:-HamGNN}', falling back to 'base'." >&2
+        conda activate base
+    fi
 else
-    source /root/miniconda3/bin/activate "${HAMGNN_CONDA_ENV:-HamGNN}"
+    echo "Warning: conda not found (set CONDA_BASE or put conda on PATH); using the current PATH Python." >&2
 fi
 
 cd "${workdir}"
