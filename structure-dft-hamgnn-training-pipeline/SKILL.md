@@ -132,7 +132,7 @@ Route selection rule:
 - export H0/S0 per case with `abacus_h0` before graph generation (see `abacus-data-processing`); H, H0, and S0 must sit in the same `OUT.ABACUS`
 - run `graph_data_gen_abacus.py` from the HamGNN checkout's `DFT_interfaces/abacus/` directory (it imports its sibling `read_abacus`/`utils` modules) with split-local `--data-dirs` and write to split-local graph output dir
 - default graph export `--output-format npz`
-- `--nao-max` accepts `13`, `15`, `27`, or `40` and must be set explicitly (no auto mode); choose the value compatible with all elements' orbitals in the dataset
+- `--nao-max` must be set explicitly (no auto mode); choose the value compatible with all elements' orbitals in the dataset. For training-bound graphs use `13`, `27`, or `40`: the ABACUS training-side basis table defines only these three (`15` is graph-generation-only and such graphs cannot be trained)
 - run graph export in an env with required deps (`torch`, `torch_geometric`; `lmdb` only when LMDB output is requested)
 - recommended command:
 

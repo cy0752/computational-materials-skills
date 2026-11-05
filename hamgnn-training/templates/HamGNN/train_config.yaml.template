@@ -44,7 +44,7 @@ output_nets:
     ham_type: __HAM_TYPE__
     k_path: null
     minMagneticMoment: 0.5
-    nao_max: __NAO_MAX__  # valid values: 14, 19, 26
+    nao_max: __NAO_MAX__  # openmx: 14/19/26; abacus: 13/27/40 (15 is graph-gen-only, not trainable)
     nonlinearity_type: gate
     num_k: 5
     soc_switch: __SOC_SWITCH__
