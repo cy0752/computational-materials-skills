@@ -19,3 +19,4 @@ description: Prepare HamGNN training configs and run locally or submit through t
 10. Keep `representation_nets.HamGNN_pre.legacy_edge_update: false` for fresh training. Set it to `true` only when resuming from a checkpoint trained before the HamGNN 2.3 edge-update fix.
 11. This stage must emit the trained model or checkpoint path required by the inference stage.
 12. Continue monitoring until training is complete. Since this stage is long-running, poll every 60 minutes.
+13. `num_k` is the TOTAL number of k-path points (pythTB semantics), not points per segment; seekpath auto paths for real structures have more vertices than small `num_k` values and generation fails silently — use an explicit `k_path` with `num_k` larger than the path's vertex count.

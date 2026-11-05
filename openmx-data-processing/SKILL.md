@@ -22,9 +22,12 @@ This skill does not assume a dedicated conda environment or any particular prove
 
 - `PYTHONBIN` (default `python`): an interpreter where `DFT_interfaces` is importable — true when HamGNN is pip-installed, or when `HAMGNN_ROOT` points at a HamGNN source checkout (exported to `PYTHONPATH` by the scripts).
 - OpenMX executables `openmx` and `openmx_postprocess` are runnable: on `PATH`, or provided via `OPENMX_BIN` / `OPENMX_POSTPROCESS_BIN` absolute paths.
+- `read_openmx` (the `.scfout` → `HS.json` analyzer) ships only as C source with HamGNN; build it or source a prebuilt binary — `openmx_postprocess` alone does not produce `HS.json`.
 - Optional `OPENMX_CONDA_ENV` activates a conda env inside `run_openmx.sh` only when explicitly set; `ONEAPI_SETVARS`, `MKLROOT`, `GSL_LIB_PATH` remain optional site hooks.
 - `graph_data_gen.yaml.nao_max` accepts only `14`, `19`, or `26`.
 - Generation writes `graph_data.npz`; reading `npz` / `lmdb` / `auto` via `dataset_params.data_format` is unaffected.
+- `band_cal` band plotting requires the flat `Hon`/`Hoff` layout written by `graph_data_gen`, and its input npz must store torch_geometric `Data` objects — a plain dict fails with `'dict' object has no attribute 'Hon'`.
+- For a single-channel model (e.g. the v2.1 universal non-SOC pickle), set `spin_colinear: false` in the band_cal config so it takes the non-spin reshape branch.
 5. Use `inspire-openmx-submit` for the actual OpenMX submission. `inspire-openmx-submit` is the authority for workspace, compute group, spec, image, and HPC submission shape.
 6. Default split-local execution policy:
 - default OpenMX task budget is `tasks=16`, `cpus-per-task=2`
@@ -38,3 +41,4 @@ This skill does not assume a dedicated conda environment or any particular prove
 7. Submit the split-local entry command that runs `<skill_root>/scripts/data_processing.sh --workdir <openmx_split_root> [--jobs <jobs>] [--omp-threads <omp_threads>]`.
 8. Use as many CPUs as practical for the split, but do not exceed the number of data points.
 9. Return the generated `.npz` path for the processed split so downstream HamGNN stages can consume it.
+10. Render `poscar2openmx.yaml`'s `DATA.PATH` (`__OPENMX_DATA_PATH__`) to the execution machine's OpenMX VPS database directory (the `data/` tree shipped with the OpenMX installation). Never leave the placeholder unresolved and never inherit a foreign absolute path from another machine (the template previously hardcoded `/root/DFT_DATA19`).
