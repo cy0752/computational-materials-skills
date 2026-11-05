@@ -128,19 +128,20 @@ Route selection rule:
 - explicit overrides are still allowed when needed
 8. Ensure sparse matrix export is enabled for graph generation:
 - in rendered `abacus_input_gen.yaml`, keep `input.out_mat_hs2: 1` so ABACUS writes `data-*-sparse_SPIN0.csr` files.
-9. After ABACUS SCF finishes for each split, generate graph dataset files from split-local case dirs:
-- run `graph_data_gen_abacus.py` with split-local `--data-dirs` and write to split-local graph output dir
+9. After ABACUS SCF finishes for each split, export H0/S0 and generate graph dataset files from split-local case dirs:
+- export H0/S0 per case with `abacus_h0` before graph generation (see `abacus-data-processing`); H, H0, and S0 must sit in the same `OUT.ABACUS`
+- run `graph_data_gen_abacus.py` from the HamGNN checkout's `DFT_interfaces/abacus/` directory (it imports its sibling `read_abacus`/`utils` modules) with split-local `--data-dirs` and write to split-local graph output dir
 - default graph export `--output-format npz`
-- default `--nao-max 19` means auto mode; it resolves to a compatible ABACUS basis profile (typically `27` or `40`) based on detected elements and fails fast on explicit incompatible values
+- `--nao-max` accepts `13`, `15`, `27`, or `40` and must be set explicitly (no auto mode); choose the value compatible with all elements' orbitals in the dataset
 - run graph export in an env with required deps (`torch`, `torch_geometric`; `lmdb` only when LMDB output is requested)
 - recommended command:
 
 ```bash
-conda run -n <stage2_graph_env> python <abacus_skill_root>/templates/abacus/graph_data_gen_abacus.py \
+cd <HamGNN_repo>/DFT_interfaces/abacus && python graph_data_gen_abacus.py \
   --data-dirs <abacus_case_dir_1> [<abacus_case_dir_2> ...] \
   --graph-data-folder <abacus_split_root>/graph_data \
   --output-format npz \
-  --nao-max 19
+  --nao-max 13
 ```
 
 10. Stage 2B outputs:

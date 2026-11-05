@@ -23,8 +23,11 @@ input:
   suffix: ABACUS
   symmetry: 1
   basis_type: lcao
-  pseudo_dir: /root/ABACUS-orbitals/SG15_v1.0/Pseudopotential
-  orbital_dir: /root/ABACUS-orbitals/SG15_v1.0/Orbitals_v2.0
+  # Machine-specific paths: render to the execution machine's SG15
+  # pseudopotential / numerical-orbital directories before running.
+  # Unrendered __PLACEHOLDER__ values fail fast in poscar2abacus.py.
+  pseudo_dir: "__ABACUS_PSEUDO_DIR__"
+  orbital_dir: "__ABACUS_ORBITAL_DIR__"
   ecutwfc: 100
   scf_thr: 1e-7
   scf_nmax: 200

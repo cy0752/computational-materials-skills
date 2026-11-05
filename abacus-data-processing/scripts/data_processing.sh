@@ -73,17 +73,24 @@ if [[ -z "${config}" ]]; then
     fi
 fi
 
-if [ -f "/root/miniconda3/etc/profile.d/conda.sh" ]; then
+conda_sh=""
+conda_base="${CONDA_BASE:-}"
+if [[ -n "${conda_base}" ]] && [[ -f "${conda_base}/etc/profile.d/conda.sh" ]]; then
+    conda_sh="${conda_base}/etc/profile.d/conda.sh"
+elif command -v conda >/dev/null 2>&1; then
+    conda_base="$(conda info --base 2>/dev/null || true)"
+    if [[ -n "${conda_base}" ]] && [[ -f "${conda_base}/etc/profile.d/conda.sh" ]]; then
+        conda_sh="${conda_base}/etc/profile.d/conda.sh"
+    fi
+fi
+
+if [[ -n "${conda_sh}" ]]; then
+    # shellcheck disable=SC1090
     # Use a stage-matched env first, then fall back to base.
-    source /root/miniconda3/etc/profile.d/conda.sh
+    source "${conda_sh}"
     if ! conda activate "${ABACUS_CONDA_ENV}" >/dev/null 2>&1; then
         echo "Warning: failed to activate '${ABACUS_CONDA_ENV}', falling back to 'base'." >&2
         conda activate base
-    fi
-elif [ -f "/root/miniconda3/bin/activate" ]; then
-    if ! source /root/miniconda3/bin/activate "${ABACUS_CONDA_ENV}" >/dev/null 2>&1; then
-        echo "Warning: failed to activate '${ABACUS_CONDA_ENV}', falling back to 'base'." >&2
-        source /root/miniconda3/bin/activate base
     fi
 fi
 
