@@ -62,4 +62,8 @@ else
 fi
 
 cd "${workdir}"
-HamGNN2.0 --config "${config}" > inference.log 2>&1
+# Invoke the Python API directly instead of the HamGNN2.0 console script:
+# the entry point hard-fails under pkg_resources version conflicts (e.g.
+# torch pins sympy==1.13.1 while the env has a newer sympy), which the
+# direct import path never checks.
+python -c "from hamgnn.main import HamGNN; HamGNN()" --config "${config}" > inference.log 2>&1
