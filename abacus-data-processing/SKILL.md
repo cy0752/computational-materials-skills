@@ -18,7 +18,7 @@ Reference usage policy:
 - `abacus_input_gen.yaml`
 - `run_abacus.sh`
 3. Render the copied template into the split-local workdir. Do not edit skill-owned templates in place.
-4. In `abacus_input_gen.yaml`, render split-specific fields only:
+4. In `abacus_input_gen.yaml`, render split-specific fields plus the runtime fields required by rules 19 and 21:
 - `structure_glob`
 - `output_root`
 - optional `system_name`

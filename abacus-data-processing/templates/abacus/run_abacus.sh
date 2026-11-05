@@ -184,8 +184,8 @@ if ! [[ "${omp_threads}" =~ ^[1-9][0-9]*$ ]]; then
 fi
 export omp_threads
 
-if [[ "${INPUT_ROOT}" == *"__ABACUS_INPUT_ROOT__"* || "${DATASET_ROOT}" == *"__ABACUS_DATASET_ROOT__"* ]]; then
-    echo "Error: run_abacus.sh placeholders are not rendered (INPUT_ROOT/DATASET_ROOT)." >&2
+if [[ "${INPUT_ROOT}" == *"__ABACUS_INPUT_ROOT__"* || "${DATASET_ROOT}" == *"__ABACUS_DATASET_ROOT__"* || "${SYSTEM_NAME}" == *"__SYSTEM_NAME__"* ]]; then
+    echo "Error: run_abacus.sh placeholders are not rendered (INPUT_ROOT/DATASET_ROOT/SYSTEM_NAME)." >&2
     exit 1
 fi
 
