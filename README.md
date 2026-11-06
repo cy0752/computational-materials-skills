@@ -24,11 +24,14 @@ The design goals are:
 
 The repository currently contains the following skills:
 
-- `structure-openmx-hamgnn-training-pipeline`  
-  A full pipeline starting from a structure file and running primitive CIF generation, perturbed dataset creation, OpenMX preprocessing, HamGNN training, and evaluation.
+- `structure-dft-hamgnn-training-pipeline`  
+  A full pipeline starting from a structure file and running primitive CIF generation, perturbed dataset creation, DFT preprocessing (OpenMX by default, ABACUS when explicitly requested), and HamGNN training up to the trained checkpoint.
 
 - `openmx-data-processing`  
   Prepares structure data into HamGNN-consumable graph data for standalone preprocessing stages.
+
+- `abacus-data-processing`  
+  Prepares structure data into HamGNN-consumable graph data through the ABACUS route, as an alternative DFT backend.
 
 - `hamgnn-training`  
   Prepares HamGNN training jobs from existing graph datasets and produces the training config and runnable entrypoint.
@@ -46,7 +49,7 @@ If you are new to this repository, the suggested reading order is:
 1. Start with the `SKILL.md` in the skill you want to use
 2. Then review the corresponding `scripts/` and `templates/`
 3. If remote execution is involved, read `remote-task-submit/SKILL.md`
-4. If you want the full workflow, read `structure-openmx-hamgnn-training-pipeline/SKILL.md`
+4. If you want the full workflow, read `structure-dft-hamgnn-training-pipeline/SKILL.md`
 
 ## Usage Notes
 

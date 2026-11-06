@@ -1,13 +1,16 @@
+# Rendered for HamGNN >= 2.3.0 (Lightning 2 config schema).
+# legacy_edge_update: true is required to load checkpoints trained before the
+# 2.3 edge-update fix; set false only for models trained on HamGNN >= 2.3.
 dataset_params:
   batch_size: 1
   graph_data_path: "__TEST_GRAPH_DATA_PATH__"
-  data_format: "__GRAPH_DATA_FORMAT__"
+  data_format: "__GRAPH_DATA_FORMAT__"  # npz | lmdb | auto
   num_workers: 1
   preload: 0
   train_ratio: 0.0
   val_ratio: 0.0
   test_ratio: 1.0
-  seed: 42
+  split_file: null
 
 losses_metrics:
   losses:
@@ -42,7 +45,7 @@ output_nets:
     ham_type: openmx
     k_path: null
     minMagneticMoment: 0.5
-    nao_max: __NAO_MAX__
+    nao_max: __NAO_MAX__  # valid values: 14, 19, 26
     nonlinearity_type: gate
     num_k: 5
     soc_switch: __SOC_SWITCH__
@@ -52,11 +55,9 @@ output_nets:
     add_H_nonsoc: false
     get_nonzero_mask_tensor: false
     zero_point_shift: false
-    uni_model_pkl_path: null
 
 profiler_params:
   progress_bar_refresh_rat: 10
-  log_every_n_steps: 10
   train_dir: "__INFERENCE_RUN_DIR__"
 
 representation_nets:
@@ -66,9 +67,9 @@ representation_nets:
     cutoff_func: cos
     edge_sh_normalization: component
     edge_sh_normalize: true
+    legacy_edge_update: __LEGACY_EDGE_UPDATE__
     irreps_edge_sh: 0e + 1o + 2e + 3o + 4e + 5o + 6e
     irreps_node_features: 32x0e+32x1o+32x1e+32x2o+32x2e+16x3o+16x3e+8x4o+8x4e+8x5o+4x5e+4x6e
-    num_heads: 4
     num_layers: 3
     num_radial: 64
     num_types: 84
@@ -79,7 +80,6 @@ representation_nets:
     radius_type: openmx
     rbf_func: bessel
     set_features: true
-    u_max: 8.0
     use_kan: false
     use_corr_prod: false
     num_hidden_features: 16
@@ -87,15 +87,12 @@ representation_nets:
 
 setup:
   GNN_Net: "__GNN_NET__"
-  accelerator: gpu
+  accelerator: gpu  # null or num_gpus 0 -> CPU
   checkpoint_path: "__CHECKPOINT_PATH__"
   load_from_checkpoint: true
   resume: false
   num_gpus: 1
-  strategy: auto
-  num_nodes: 1
   precision: 32
   property: hamiltonian
   stage: test
-  enable_tf32: true
   ignore_warnings: true

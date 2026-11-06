@@ -25,19 +25,27 @@ mkdir -p "${LOG_DIR}" "${PROGRESS_DIR}" "${DATASET_ROOT}"
 exec > >(tee -a "${LOG_FILE}") 2>&1
 
 conda_activated=0
-if [ -f "/root/miniconda3/etc/profile.d/conda.sh" ]; then
-    source /root/miniconda3/etc/profile.d/conda.sh
-    if conda activate "${ABACUS_CONDA_ENV}" >/dev/null 2>&1; then
-        conda_activated=1
+conda_sh=""
+conda_base="${CONDA_BASE:-}"
+if [[ -n "${conda_base}" ]] && [[ -f "${conda_base}/etc/profile.d/conda.sh" ]]; then
+    conda_sh="${conda_base}/etc/profile.d/conda.sh"
+elif command -v conda >/dev/null 2>&1; then
+    conda_base="$(conda info --base 2>/dev/null || true)"
+    if [[ -n "${conda_base}" ]] && [[ -f "${conda_base}/etc/profile.d/conda.sh" ]]; then
+        conda_sh="${conda_base}/etc/profile.d/conda.sh"
     fi
-elif [ -f "/root/miniconda3/bin/activate" ]; then
-    if source /root/miniconda3/bin/activate "${ABACUS_CONDA_ENV}" >/dev/null 2>&1; then
+fi
+
+if [[ -n "${conda_sh}" ]]; then
+    # shellcheck disable=SC1090
+    source "${conda_sh}"
+    if conda activate "${ABACUS_CONDA_ENV}" >/dev/null 2>&1; then
         conda_activated=1
     fi
 fi
 
 if [[ "${conda_activated}" != "1" ]]; then
-    echo "Warning: failed to activate conda environment '${ABACUS_CONDA_ENV}'. Continuing with current shell environment."
+    echo "Warning: failed to activate conda environment '${ABACUS_CONDA_ENV}' (set CONDA_BASE if conda is not on PATH). Continuing with current shell environment."
 fi
 
 if [[ "${ABACUS_CMD}" == "${ABACUS_BIN}" ]] && ! command -v "${ABACUS_BIN}" >/dev/null 2>&1; then
@@ -176,8 +184,8 @@ if ! [[ "${omp_threads}" =~ ^[1-9][0-9]*$ ]]; then
 fi
 export omp_threads
 
-if [[ "${INPUT_ROOT}" == *"__ABACUS_INPUT_ROOT__"* || "${DATASET_ROOT}" == *"__ABACUS_DATASET_ROOT__"* ]]; then
-    echo "Error: run_abacus.sh placeholders are not rendered (INPUT_ROOT/DATASET_ROOT)." >&2
+if [[ "${INPUT_ROOT}" == *"__ABACUS_INPUT_ROOT__"* || "${DATASET_ROOT}" == *"__ABACUS_DATASET_ROOT__"* || "${SYSTEM_NAME}" == *"__SYSTEM_NAME__"* ]]; then
+    echo "Error: run_abacus.sh placeholders are not rendered (INPUT_ROOT/DATASET_ROOT/SYSTEM_NAME)." >&2
     exit 1
 fi
 
