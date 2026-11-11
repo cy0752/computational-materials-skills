@@ -1,0 +1,4 @@
+interface:
+  display_name: "VASP INCAR Setup"
+  short_description: "Generate structure-aware VASP INCAR and KPOINTS"
+  default_prompt: "Use $vasp-incar-setup with a POSCAR, CONTCAR, or CIF to generate or review a structure-aware VASP INCAR and KPOINTS, including NCL or SOC setups when needed."
