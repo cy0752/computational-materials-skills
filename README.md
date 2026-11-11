@@ -2,7 +2,39 @@
 
 A collection of reusable skills for computational condensed matter physics workflows.
 
-This repository organizes skill modules for structure preparation, OpenMX data processing, HamGNN training and inference, and remote job submission. Each skill is expected to be usable on its own and also composable into higher-level workflows.
+This repository organizes skill modules for VASP input setup, structure preparation, OpenMX data processing, HamGNN training and inference, and remote job submission. Each skill is expected to be usable on its own and also composable into higher-level workflows.
+
+## Installation
+
+The repository contains multiple independent skills. Install it by placing the skill directories under the skills directory used by your agent.
+
+### Project-level installation
+
+Project-level installation keeps the skills available only to one project. From the project root, run:
+
+```bash
+skill_tmp_dir="$(mktemp -d)"
+git clone https://github.com/cy0752/computational-materials-skills.git "$skill_tmp_dir"
+mkdir -p .codex/skills
+cp -R "$skill_tmp_dir"/* .codex/skills/
+rm -rf "$skill_tmp_dir"
+```
+
+The resulting layout should contain entries such as `.codex/skills/vasp-incar-setup/SKILL.md` and `.codex/skills/hamgnn-training/SKILL.md`.
+
+### Global installation
+
+Global installation makes the skills available across projects. Copy the skill directories into your global Codex skills directory:
+
+```bash
+skill_tmp_dir="$(mktemp -d)"
+git clone https://github.com/cy0752/computational-materials-skills.git "$skill_tmp_dir"
+mkdir -p ~/.codex/skills
+cp -R "$skill_tmp_dir"/* ~/.codex/skills/
+rm -rf "$skill_tmp_dir"
+```
+
+If `CODEX_HOME` is configured to a custom location, use `${CODEX_HOME}/skills` in place of `~/.codex/skills`. Restart the agent or reload the project after installation so it discovers the new skills.
 
 ## Repository Overview
 
@@ -39,8 +71,10 @@ The repository currently contains the following skills:
 - `hamgnn-inference`  
   Prepares HamGNN inference or evaluation jobs from an existing model and test dataset.
 
+- `vasp-incar-setup` — Generates or reviews structure-aware VASP `INCAR` and `KPOINTS` settings for relaxations, static calculations, DOS, band structures, phonons, molecular dynamics, DFT+U, noncollinear magnetism, and SOC workflows.
+
 - `remote-task-submit`  
-  A centralized adapter for remote job submission. This is the only place in the repository that should carry site-specific details such as queues, schedulers, images, accounts, or resource profiles.
+  A compatibility adapter for remote job submission that routes to the canonical generic or workflow-specific submission skills.
 
 ## Recommended Reading Order
 
@@ -48,8 +82,9 @@ If you are new to this repository, the suggested reading order is:
 
 1. Start with the `SKILL.md` in the skill you want to use
 2. Then review the corresponding `scripts/` and `templates/`
-3. If remote execution is involved, read `remote-task-submit/SKILL.md`
-4. If you want the full workflow, read `structure-dft-hamgnn-training-pipeline/SKILL.md`
+3. For VASP input preparation, read `vasp-incar-setup/SKILL.md` and only the reference files relevant to the calculation
+4. If remote execution is involved, read `remote-task-submit/SKILL.md`
+5. If you want the full workflow, read `structure-dft-hamgnn-training-pipeline/SKILL.md`
 
 ## Usage Notes
 
@@ -60,6 +95,7 @@ If you only need one stage, for example:
 - OpenMX data processing only
 - HamGNN training only
 - HamGNN inference only
+- VASP INCAR and KPOINTS setup only
 
 it is better to enter the corresponding skill directory directly and follow the input requirements and execution rules described in its `SKILL.md`.
 
@@ -120,7 +156,7 @@ Suggestions based on real usage are especially valuable for improving this repos
 
 ## Possible Future Additions
 
-This repository is expected to grow with more skills for widely used computational condensed matter physics software, including packages such as `VASP` and `SIESTA`.
+This repository is expected to grow with more skills for widely used computational condensed matter physics software, including packages such as `SIESTA`.
 
 Future additions may also include:
 
