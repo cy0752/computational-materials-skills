@@ -15,12 +15,12 @@ Project-level installation keeps the skills available only to one project. From 
 ```bash
 skill_tmp_dir="$(mktemp -d)"
 git clone https://github.com/cy0752/computational-materials-skills.git "$skill_tmp_dir"
-mkdir -p .codex/skills
-cp -R "$skill_tmp_dir"/* .codex/skills/
+mkdir -p .agents/skills
+cp -R "$skill_tmp_dir"/* .agents/skills/
 rm -rf "$skill_tmp_dir"
 ```
 
-The resulting layout should contain entries such as `.codex/skills/vasp-incar-setup/SKILL.md` and `.codex/skills/hamgnn-training/SKILL.md`.
+The resulting layout should contain entries such as `.agents/skills/vasp-incar-setup/SKILL.md` and `.agents/skills/hamgnn-training/SKILL.md`.
 
 ### Global installation
 
