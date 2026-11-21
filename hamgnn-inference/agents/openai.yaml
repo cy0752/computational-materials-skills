@@ -1,4 +1,4 @@
 interface:
   display_name: "hamgnn inference"
-  short_description: "submit hamgnn inference job"
-  default_prompt: "Use $hamgnn-inference to render the inference config and submit the HamGNN job through $inspire-hamgnn-submit."
+  short_description: "Predict Hamiltonians and calculate energy bands"
+  default_prompt: "请用 $hamgnn-inference 帮我预测这个结构的能带。"

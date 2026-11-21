@@ -1,0 +1,10 @@
+Ham_type: "__HAM_TYPE__"
+nao_max: __NAO_MAX__
+graph_data_path: "__PREDICTION_GRAPH_PATH__"
+hamiltonian_path: "__PREDICTED_HAMILTONIAN_PATH__"
+save_dir: "__BAND_OUTPUT_DIR__"
+strcture_name: "__SYSTEM_NAME__"
+soc_switch: __SOC_SWITCH__
+spin_colinear: __COLLINEAR_SPIN__
+auto_mode: true
+nk: 120

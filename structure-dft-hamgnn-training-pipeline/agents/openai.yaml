@@ -1,4 +1,4 @@
 interface:
   display_name: "structure-dft-hamgnn-training-pipeline"
   short_description: "build dataset and train HamGNN from structure"
-  default_prompt: "Use $structure-dft-hamgnn-training-pipeline with a structure file path to generate perturbed CIF datasets, run DFT preprocessing (OpenMX by default, ABACUS when explicitly requested) in execution_mode=submit|local, and train HamGNN up to the final checkpoint."
+  default_prompt: "请用 $structure-dft-hamgnn-training-pipeline 从晶体结构出发训练 HamGNN。"

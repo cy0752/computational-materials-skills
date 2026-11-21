@@ -1,6 +1,6 @@
 ---
 name: structure-dft-hamgnn-training-pipeline
-description: Structure-file-driven OpenMX/ABACUS-to-HamGNN training pipeline. Use when users provide a crystal structure file such as CIF or POSCAR and want to build a perturbed CIF dataset, run DFT preprocessing (OpenMX by default, ABACUS when explicitly requested), and train a HamGNN model, stopping at the trained checkpoint.
+description: Train HamGNN from a crystal structure. Find or ask for a CIF or POSCAR, generate a perturbed dataset, run DFT preprocessing with OpenMX by default or ABACUS when requested, and return the trained checkpoint.
 ---
 
 # Structure-Driven OpenMX/ABACUS HamGNN Training Pipeline
@@ -12,15 +12,12 @@ Train HamGNN from a user-specified structure file with this strict sequential lo
 
 Never skip, reorder, or merge stages.
 
-## Required Inputs
+## Start from the user's goal
 
-1. `work_root` (default: current working directory)
-2. `structure_path` (required; input structure file path)
-3. `num_perturb` (must be confirmed with the user before changing or assuming a total sample count)
-4. `train_split_ratio` (default: `0.8`)
-5. `target_dir` (create this dir and place all new files inside it, default: `hamgnn_train_{timestamp}`)
-6. `dft_engine` (optional: `openmx` or `abacus`; default: `openmx`)
-7. `execution_mode` (optional: `submit` or `local`; default: `submit`)
+- Resolve the single starting structure from an explicit path, attachment, upstream result, or a clearly intended file in the current project. Ask for the path only if missing or ambiguous. If the user only wants graphs for existing structures, use the corresponding DFT data-processing skill directly.
+- In the same message, offer the default plan and ask about optional changes once. Use `25` perturbed structures, an `80/20` train/test split, a `0.06 Å` maximum displacement per atom, OpenMX, and Inspire submission unless the user asks for other settings. Offer sample count, split ratio, DFT settings or template, local execution, and training epochs as the common adjustments. If the structure is already known, ask only about relevant adjustments. Once required inputs are resolved, proceed with the defaults when no overrides are given. Carry the answers and defaults into each stage.
+- Example first reply when the structure is missing. “起始 CIF 或 POSCAR 在哪里？默认生成 25 个扰动结构，按 80/20 划分，用 OpenMX 计算并训练 HamGNN。样本数量、划分比例和计算设置都可以调整。您有想改的设置吗？”
+- Default `work_root` to the current working directory. Create `hamgnn_train_{timestamp}` under it unless the user provides `target_dir`. Put the new files in that directory.
 
 ## Local Environment Policy
 
@@ -52,7 +49,7 @@ conda run -n "${HAMGNN_CONDA_ENV:-HamGNN}" python <skill_root>/scripts/structure
 
 1. Use the local conda env named by `HAMGNN_CONDA_ENV` (default `HamGNN`) and run `<skill_root>/scripts/prepare_perturbed_dataset.py`.
 2. Use the Stage 0 CIF as the only structural input source for this stage.
-3. Keep the train/test split ratio logic, but do not silently choose or change the total number of perturbed structures without discussing it with the user first.
+3. Use the announced or user-specified sample count and split ratio.
 4. Apply a hard perturbation cap of `0.06 Å` per atom via `--max-displacement`.
 5. Run:
 
@@ -87,7 +84,7 @@ Route selection rule:
 1. Use `openmx-data-processing` to prepare split-local OpenMX inputs for the CIF datasets generated in Stage 1.
 2. `execution_mode` handling:
 - `submit`: submit actual OpenMX jobs through `inspire-openmx-submit`; this is the sole authority for OpenMX submission parameters such as workspace, compute group, spec, image, and HPC submission shape.
-- `local`: run the split-local OpenMX flow directly in local workdirs (generate input, then execute `run_openmx.sh`).
+- `local`: run `openmx-data-processing/scripts/data_processing.sh --workdir <openmx_split_root>` on the current machine.
 3. Do not hardcode OpenMX image or resource parameters in this pipeline skill.
 4. Render split-local OpenMX workdirs from `openmx-data-processing/templates/openmx/`.
 5. Process the training split first. Process the test split separately only when Stage 1 actually created a non-empty external test split.

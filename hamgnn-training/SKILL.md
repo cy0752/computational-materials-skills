@@ -1,11 +1,24 @@
 ---
 name: hamgnn-training
-description: Prepare HamGNN training configs and run locally or submit through the canonical HamGNN Inspire flow.
+description: Train HamGNN from labeled OpenMX or ABACUS graph data. Reuse the upstream dataset or ask where it is, prepare a training config, and run locally or through the HamGNN Inspire flow.
 ---
 
 # HamGNN Training
 
-1. Start from `<skill_root>/templates/HamGNN/train_config.yaml.template`, then render a run-local config under `<target_dir>/HamGNN/`.
+## Start from the user's goal
+
+- A request such as “帮我训练一个 Si HamGNN 模型” is enough to start. Reuse the requested dataset, a clearly associated project dataset such as `dataset/graph_data.npz`, or an upstream result. Ask for the graph data path only if it is missing or ambiguous. Use `structure-dft-hamgnn-training-pipeline` when the user wants to start from structures and generate training labels.
+- In the same message, state the defaults and ask once about optional changes. Use one GPU, `HamGNN_pre`, up to `200` epochs, batch size `1`, learning rate `0.0001`, and an isolated run in `work/train/` unless the user gives other settings. Choose a fresh timestamped sibling if the default directory is already occupied. For example, “训练用的图数据在哪里？默认用一张 GPU，最多训练 200 轮，结果放在 `work/train/`。学习率、轮数、批大小和数据划分都可以调整。您有想改的设置吗？” Once required inputs are known, proceed with the chosen settings and defaults. Reuse preferences already given or settled by an upstream pipeline.
+- Inspect the graph count, labels, and metadata before rendering the config. Resolve `ham_type`, `nao_max`, SOC, spin channels, and H0 availability from the packing config and graph schema. For standard flattened graph matrices, infer `nao_max` from the square root of the overlap width and verify it agrees across the dataset and with the backend. Check the Hamiltonian fields and shapes against the inferred SOC and spin route. Set `add_H0` from compatible reference fields and render losses against the actual label fields. Ask only when a required compatibility choice is unresolved. For an explicit learning rate such as `0.01`, set `optim_params.lr` accordingly and disclose the separate `muon_lr` if the Muon optimizer is enabled.
+
+## Data split
+
+- For standalone training on one unsplit dataset, default to `80/10/10` train/validation/test. Save disjoint `train_idx`, `val_idx`, and `test_idx` arrays in a run-local `split.npz` and set `dataset_params.split_file` to it. Use a reproducible seed such as `42`. Round to whole graphs while keeping at least one in each group when there are at least three graphs. Three graphs yield a `1/1/1` demonstration and only a one-graph test result.
+- Reuse supplied splits. When a dedicated training dataset or a separate test dataset is supplied, default to a `90/10` train/validation split within the training data and evaluate only on the separate test data if available. With just two graphs and no split, use one for training and one for validation. Report independent test metrics as unavailable when no test graphs are available. A validation-selected run needs both training and validation graphs, so ask for more data if that split is impossible.
+
+## Execution
+
+1. Start from `<skill_root>/templates/HamGNN/train_config.yaml.template`, then render `train_config.yaml` inside the chosen run directory. Keep the pipeline's own `HamGNN/` directory when called as a stage. Set `profiler_params.train_dir` to a run-local directory for TensorBoard logs and checkpoints.
 2. Use `inspire-hamgnn-submit` for the actual remote submission. `inspire-hamgnn-submit` is the sole authority for HamGNN workspace, GPU resource, image, and helper selection.
 3. Use `<skill_root>/scripts/train.sh --workdir <hamgnn_workdir> --config <rendered_train_config>` as the required runnable entrypoint for this stage.
 4. Do not edit a shared global `HamGNN/train_config.yaml` in place.
@@ -17,8 +30,12 @@ description: Prepare HamGNN training configs and run locally or submit through t
 8. Apply the same rendered `__HAM_TYPE__` value to both `output_nets.HamGNN_out.ham_type` and `representation_nets.HamGNN_pre.radius_type`.
 9. The main training config has no Uni-model option. HamGNN >= 2.3.0 moved Uni models to the separate `Uni-HamGNN` workflow (`Uni-HamiltonianPredictor.py` + `Input.yaml`); `uni_model_pkl_path` no longer exists. If the user asks for a Uni model, treat it as a dedicated out-of-band flow instead of rendering Uni keys here.
 10. Keep `representation_nets.HamGNN_pre.legacy_edge_update: false` for fresh training. Set it to `true` only when resuming from a checkpoint trained before the HamGNN 2.3 edge-update fix.
-11. This stage must emit the trained model or checkpoint path required by the inference stage.
-12. Continue monitoring until training is complete. Since this stage is long-running, poll every 60 minutes.
-13. `num_k` is the TOTAL number of k-path points (pythTB semantics), not points per segment; seekpath auto paths for real structures have more vertices than small `num_k` values and generation fails silently — use an explicit `k_path` with `num_k` larger than the path's vertex count.
-14. Render `__NAO_MAX__` per route: OpenMX route accepts `14`, `19`, or `26`; ABACUS route accepts `13`, `27`, or `40`. `15` exists only on the ABACUS graph-generation side and has no training-side basis definition — `nao_max: 15` graphs fail at model build with `NotImplementedError`.
-15. `scripts/train.sh` resolves its interpreter by conda env name only: `HAMGNN_CONDA_ENV` (default `HamGNN`; on activation failure it warns and falls back to `base`), located via `CONDA_BASE` or `conda` on `PATH`. It has no `PYTHON_BIN` override; when the target env lives outside the default envs directory, export `CONDA_ENVS_PATH` so the name resolves.
+11. Continue monitoring until training is complete and verify the deliverables below.
+12. For band-energy training, `num_k` counts the total points across the entire k path. Use an explicit `k_path` with `num_k` larger than the path's vertex count.
+13. Render `__NAO_MAX__` to a supported basis layout. OpenMX training supports `14`, `19`, and `26`. ABACUS training supports `13`, `27`, and `40`.
+14. `scripts/train.sh` uses `HAMGNN_CONDA_ENV` (default `HamGNN`) and locates conda through `CONDA_BASE` or `PATH`. It falls back to `base` if activation fails. Export `CONDA_ENVS_PATH` when the environment is installed outside the default envs directory.
+
+## Deliverables
+
+- After a standalone run, use the training environment and the same workdir to run `python <skill_root>/scripts/report_training.py --config train_config.yaml --run-dir <profiler_train_dir>/version_N`. Pass `--test-data <path>` for a separate test dataset. For remote execution, run the report with the allocated GPU or as a follow-up evaluation job. Use the `version_N` created for this fit. Upstream fit tests the final weights, so the report reruns evaluation using the checkpoint saved for the minimum validation loss. Internal evaluation uses the recorded test indices.
+- Return the best checkpoint, `training_curves.png`, `test_metrics.json`, `train_config.yaml`, and `log.out`. Also provide the split file when generated and state the train/validation/test counts. For use as a pipeline stage, honor the pipeline's requested deliverables.

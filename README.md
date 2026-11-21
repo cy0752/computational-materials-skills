@@ -1,8 +1,18 @@
-# Computational Condensed Matter Physics Skills
+# Computational Materials Skills
 
-A collection of reusable skills for computational condensed matter physics workflows.
+Reusable AI agent skills for computational materials workflows with VASP, OpenMX, ABACUS, and HamGNN.
 
-This repository organizes skill modules for VASP input setup, structure preparation, OpenMX data processing, HamGNN training and inference, and remote job submission. Each skill is expected to be usable on its own and also composable into higher-level workflows.
+Use the skills for individual tasks or combine them to prepare structures, generate DFT-labeled graphs, train HamGNN models, and predict electronic band structures.
+
+## Quick Start
+
+After installation, start with the result you want.
+
+- `Use $openmx-data-processing to generate labeled HamGNN graphs.`
+- `Use $hamgnn-training to train a Si HamGNN model.`
+- `Use $hamgnn-inference to predict the band structure of this Si structure.`
+
+The skills look for relevant inputs in the project and reuse outputs from earlier stages. They ask for a path when inputs are missing or ambiguous, explain the defaults, and let you override parameters such as the training learning rate or the band k path.
 
 ## Installation
 
@@ -60,16 +70,16 @@ The repository currently contains the following skills:
   A full pipeline starting from a structure file and running primitive CIF generation, perturbed dataset creation, DFT preprocessing (OpenMX by default, ABACUS when explicitly requested), and HamGNN training up to the trained checkpoint.
 
 - `openmx-data-processing`  
-  Prepares structure data into HamGNN-consumable graph data for standalone preprocessing stages.
+  Runs OpenMX on structures and packages labeled Hamiltonian, H0, and overlap data as HamGNN graphs. Also supports H0-only graph preparation for prediction.
 
 - `abacus-data-processing`  
   Prepares structure data into HamGNN-consumable graph data through the ABACUS route, as an alternative DFT backend.
 
 - `hamgnn-training`  
-  Prepares HamGNN training jobs from existing graph datasets and produces the training config and runnable entrypoint.
+  Trains on existing graph datasets and returns the validation-selected checkpoint, training curves, available held-out test metrics, and the run configuration and logs.
 
 - `hamgnn-inference`  
-  Prepares HamGNN inference or evaluation jobs from an existing model and test dataset.
+  Loads a trained model and predicts Hamiltonians from existing graphs or OpenMX prediction inputs. It can also calculate and plot electronic bands.
 
 - `vasp-incar-setup` — Generates or reviews structure-aware VASP `INCAR` and `KPOINTS` settings for relaxations, static calculations, DOS, band structures, phonons, molecular dynamics, DFT+U, noncollinear magnetism, and SOC workflows.
 
@@ -118,7 +128,7 @@ If a skill depends on environment-specific values, prefer placeholders, environm
 
 This repository is suitable for:
 
-- Breaking computational condensed matter physics workflows into reusable skills
+- Breaking computational materials workflows into reusable skills
 - Giving AI agents or automation systems clear stage boundaries
 - Modularizing the path from structure preparation to simulation, training, and inference
 - Reducing upper-layer changes when moving across different machines, queues, or platforms
@@ -156,7 +166,7 @@ Suggestions based on real usage are especially valuable for improving this repos
 
 ## Possible Future Additions
 
-This repository is expected to grow with more skills for widely used computational condensed matter physics software, including packages such as `SIESTA`.
+This repository is expected to grow with more skills for widely used computational materials software, including packages such as `SIESTA`.
 
 Future additions may also include:
 

@@ -7,6 +7,7 @@ INPUT_ROOT="${INPUT_ROOT:-__OPENMX_INPUT_ROOT__}"
 DATASET_ROOT="${DATASET_ROOT:-__OPENMX_DATASET_ROOT__}"
 OPENMX_BIN="${OPENMX_BIN:-openmx}"
 OPENMX_POSTPROCESS_BIN="${OPENMX_POSTPROCESS_BIN:-openmx_postprocess}"
+OPENMX_POSTPROCESS_ONLY="${OPENMX_POSTPROCESS_ONLY:-0}"
 PARALLEL_BIN="${PARALLEL_BIN:-parallel}"
 TASKSET_BIN="${TASKSET_BIN:-taskset}"
 ONEAPI_SETVARS="${ONEAPI_SETVARS:-}"
@@ -161,36 +162,36 @@ run_single_calculation() {
     local slot_index="$2"
     local work_dir="${DATASET_ROOT}/${data_id}"
     local input_dat_path="${INPUT_ROOT}/${data_id}.dat"
-    local target_dat_path="${work_dir}/${SYSTEM_NAME}.dat"
+    local dat_file="${SYSTEM_NAME}.dat"
     local std_file="${SYSTEM_NAME}.std"
     local postprocess_std_file="openmx_postprocess.std"
-    local debug_log="${work_dir}/debug_progress.log"
+    local debug_log="debug_progress.log"
     local cpu_binding=""
+    local -a launch=()
 
-    mkdir -p "${work_dir}"
-    cp "${input_dat_path}" "${target_dat_path}"
+    mkdir -p "${work_dir}" || return 1
+    cp "${input_dat_path}" "${work_dir}/${dat_file}" || return 1
+    cd "${work_dir}" || return 1
     echo "$(date): [START] ${data_id}" > "${debug_log}"
-    cd "${work_dir}" || { echo "ERROR: Failed to cd into ${work_dir}." >> "${debug_log}"; return 1; }
 
+    # OpenMX 3.9.9 can prepend System.CurrrentDirectory when writing the DAT
+    # with final coordinates. Pass the local filename so ./Si.dat# is valid.
     if cpu_binding="$(select_cpu_slice "${slot_index}" "${omp_threads}")"; then
         echo "$(date): [BIND] slot=${slot_index} cpus=${cpu_binding}" >> "${debug_log}"
-        echo "$(date): [EXEC] OMP_NUM_THREADS=${omp_threads} ${TASKSET_BIN} -c ${cpu_binding} ${OPENMX_BIN} ${target_dat_path} -nt ${omp_threads}" >> "${debug_log}"
-        OMP_NUM_THREADS="${omp_threads}" "${TASKSET_BIN}" -c "${cpu_binding}" "${OPENMX_BIN}" "${target_dat_path}" -nt "${omp_threads}" > "${std_file}" 2>&1
+        launch=("${TASKSET_BIN}" -c "${cpu_binding}")
     else
         echo "$(date): [BIND] slot=${slot_index} insufficient cpus in allowed set; running unbound" >> "${debug_log}"
-        echo "$(date): [EXEC] OMP_NUM_THREADS=${omp_threads} ${OPENMX_BIN} ${target_dat_path} -nt ${omp_threads}" >> "${debug_log}"
-        OMP_NUM_THREADS="${omp_threads}" "${OPENMX_BIN}" "${target_dat_path}" -nt "${omp_threads}" > "${std_file}" 2>&1
     fi
-    echo "$(date): [POST-EXEC] OpenMX exit status: $?" >> "${debug_log}"
 
-    if [[ -n "${cpu_binding}" ]]; then
-        echo "$(date): [EXEC] OMP_NUM_THREADS=${omp_threads} ${TASKSET_BIN} -c ${cpu_binding} ${OPENMX_POSTPROCESS_BIN} ${target_dat_path} -nt ${omp_threads}" >> "${debug_log}"
-        OMP_NUM_THREADS="${omp_threads}" "${TASKSET_BIN}" -c "${cpu_binding}" "${OPENMX_POSTPROCESS_BIN}" "${target_dat_path}" -nt "${omp_threads}" > "${postprocess_std_file}" 2>&1
-    else
-        echo "$(date): [EXEC] OMP_NUM_THREADS=${omp_threads} ${OPENMX_POSTPROCESS_BIN} ${target_dat_path} -nt ${omp_threads}" >> "${debug_log}"
-        OMP_NUM_THREADS="${omp_threads}" "${OPENMX_POSTPROCESS_BIN}" "${target_dat_path}" -nt "${omp_threads}" > "${postprocess_std_file}" 2>&1
+    if [[ "${OPENMX_POSTPROCESS_ONLY}" != 1 ]]; then
+        echo "$(date): [EXEC] OMP_NUM_THREADS=${omp_threads} ${launch[*]} ${OPENMX_BIN} ${dat_file} -nt ${omp_threads}" >> "${debug_log}"
+        OMP_NUM_THREADS="${omp_threads}" "${launch[@]}" "${OPENMX_BIN}" "${dat_file}" -nt "${omp_threads}" > "${std_file}" 2>&1 || return $?
+        echo "$(date): [POST-EXEC] OpenMX exit status: 0" >> "${debug_log}"
     fi
-    echo "$(date): [POST-EXEC] openmx_postprocess exit status: $?" >> "${debug_log}"
+
+    echo "$(date): [EXEC] OMP_NUM_THREADS=${omp_threads} ${launch[*]} ${OPENMX_POSTPROCESS_BIN} ${dat_file} -nt ${omp_threads}" >> "${debug_log}"
+    OMP_NUM_THREADS="${omp_threads}" "${launch[@]}" "${OPENMX_POSTPROCESS_BIN}" "${dat_file}" -nt "${omp_threads}" > "${postprocess_std_file}" 2>&1 || return $?
+    echo "$(date): [POST-EXEC] openmx_postprocess exit status: 0" >> "${debug_log}"
 
     touch "${PROGRESS_DIR}/${data_id}.done"
     local completed_count
@@ -200,7 +201,7 @@ run_single_calculation() {
 
 export -f run_single_calculation
 export -f expand_cpu_list select_cpu_slice
-export SYSTEM_NAME INPUT_ROOT DATASET_ROOT OPENMX_BIN OPENMX_POSTPROCESS_BIN PROGRESS_DIR TOTAL_TASKS TASKSET_BIN
+export SYSTEM_NAME INPUT_ROOT DATASET_ROOT OPENMX_BIN OPENMX_POSTPROCESS_BIN OPENMX_POSTPROCESS_ONLY PROGRESS_DIR TOTAL_TASKS TASKSET_BIN
 
 jobs_arg="${1:-${OPENMX_JOBS:-}}"
 omp_threads="${2:-${OPENMX_OMP_THREADS:-$DEFAULT_OMP_THREADS}}"

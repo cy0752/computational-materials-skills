@@ -1,4 +1,4 @@
 interface:
   display_name: "hamgnn training"
   short_description: "prepare and run hamgnn training"
-  default_prompt: "Use $hamgnn-training to render the training config, set __HAM_TYPE__ from upstream route, and run or submit HamGNN training as required."
+  default_prompt: "请用 $hamgnn-training 帮我训练 HamGNN 模型。"

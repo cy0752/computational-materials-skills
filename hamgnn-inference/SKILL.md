@@ -1,26 +1,41 @@
 ---
 name: hamgnn-inference
-description: Prepare and submit HamGNN inference jobs through the canonical HamGNN Inspire submit flow.
+description: Predict Hamiltonians and calculate band structures with a trained HamGNN checkpoint or Uni-HamGNN. Reuse existing graphs or prepare prediction graphs from OpenMX DAT, POSCAR, or CIF inputs. Find upstream inputs or ask for missing paths.
 ---
 
 # HamGNN Inference
 
-1. Start from `<skill_root>/templates/HamGNN/test_config.yaml.template`, then render a run-local config under `<target_dir>/HamGNN/`.
+## Start from the user's goal
+
+- A request such as “帮我预测 Si 的能带” is enough to start. Prefer the user's inputs, then the relevant upstream result, then clearly associated project files. Look for prediction inputs such as `inputs/input_predict.dat` or a dedicated prediction graph, and for the validation-selected checkpoint from the training report or a clearly identified `models/checkpoints/best.ckpt`. Keep training graphs separate from the requested prediction structures. Ask for the structure or graph path and checkpoint path together only when needed. A request for the universal model selects the Uni-HamGNN workflow below.
+- In that message, summarize the defaults and ask once about optional changes. Predict the Hamiltonian for every selected structure using the checkpoint settings. For an energy-band request, calculate bands with a symmetry-derived k path and `120` total k points by default. Offer a custom k path, point count, or output directory as adjustments. Use `work/predict/` by default and a timestamped sibling if the default is occupied. Proceed when the required inputs are resolved and reuse choices already given by the user or upstream stages.
+
+## Prepare Prediction Graphs
+
+- Prefer the training run's rendered configuration when available. Resolve the backend, `nao_max`, spin and SOC modes, H0 use, network dimensions, and legacy edge behavior before graph generation. Use the checkpoint and available provenance to check these settings. Check that existing graphs agree with the selected model. Ask only about required compatibility settings that remain unresolved.
+- For an OpenMX DAT such as `inputs/input_predict.dat`, the input already contains geometry, PAO/VPS, and OpenMX settings. Preserve the geometry, site order, basis, and physical settings in a run-local copy. Resolve `DATA.PATH` against the execution machine and use `System.CurrrentDirectory ./`. For POSCAR or CIF inputs, use the OpenMX converter with the checkpoint's training basis and compatible calculation settings. Check the elements, orbital layout, and spin mode before launch.
+- Use `openmx-data-processing` to stage templates under the prediction run, and run its launcher with `--postprocess-only`. Add `--prepared-inputs` when staging complete DAT files. Run `openmx_postprocess` in each structure directory, then pack `overlap.scfout` with `std_file_name: null` and `scfout_file_name: overlap.scfout`. The standard packer reads one non-SOC channel. Use the matching packer for other spin modes. Check the graph count, H0, overlap, and the site order before inference.
+
+## Execution
+
+1. Render `test_config.yaml` in the prediction workdir using the training configuration, with `<skill_root>/templates/HamGNN/test_config.yaml.template` as the fallback. Set `stage: test`, the chosen checkpoint and graph paths, and a run-local TensorBoard output root.
 2. Use `inspire-hamgnn-submit` for the actual remote submission. `inspire-hamgnn-submit` is the sole authority for HamGNN workspace, GPU resource, image, and helper selection.
 3. Use `<skill_root>/scripts/inference.sh --workdir <hamgnn_workdir> --config <rendered_test_config>` as the required runnable entrypoint for this stage.
 4. Do not edit a shared global `HamGNN/test_config.yaml` in place.
-5. This stage consumes:
-- the trained model or checkpoint path from the training stage
-- the test `.npz` generated in the Stage 2 DFT data-processing stage (OpenMX or ABACUS)
-- the inference config in `test_config.yaml`
-6. When the upstream pipeline already produced a dedicated test `.npz`, render the config so stage `test` consumes that entire dataset as the inference set. Do not ask HamGNN to split the external test dataset again.
+5. Run stage `test` on the entire selected graph dataset. Use one inference device when exporting Hamiltonians for bands so the output order matches the graph order.
+6. On the H0-only route, set `zero_point_shift: false` and `calculate_band_energy: false` for Hamiltonian prediction. Keep a Hamiltonian loss entry with `prediction: hamiltonian` and `target: hamiltonian` so HamGNN exports `prediction_hamiltonian.npy` through its test stage. The loss and target output on this route refer to H0 and provide no SCF accuracy metrics. Calculate bands from the exported predictions in the separate step below.
 7. The main inference config has no Uni-model option. HamGNN >= 2.3.0 moved Uni models to the separate `Uni-HamGNN` workflow; `uni_model_pkl_path` no longer exists. Do not render Uni keys in `test_config.yaml`.
 8. The template hardcodes `ham_type: openmx` and `radius_type: openmx` as sample values only. Render both fields according to the checkpoint's training route: keep `openmx` for OpenMX-trained checkpoints, and override both to `abacus` for checkpoints trained through the ABACUS route (`structure-dft-hamgnn-training-pipeline` Stage 2B + `hamgnn-training` with `__HAM_TYPE__: abacus`). The two fields must always carry the same value; a mismatch makes HamGNN load an inconsistent model.
 9. Render `representation_nets.HamGNN_pre.legacy_edge_update` according to the checkpoint: `true` for any checkpoint trained before the HamGNN 2.3 edge-update fix (the common case for pre-existing models), `false` only for models trained on HamGNN >= 2.3. A wrong value fails to load or silently degrades old checkpoints.
-10. This stage must emit the prediction artifacts required by the band-structure plotting stage.
+10. Verify `prediction_hamiltonian.npy` in the actual TensorBoard run directory. Keep the graph order and spin layout when passing it to the band calculator.
 11. Continue monitoring until inference is complete.
 12. For universal general-purpose inference, use the author-released `uni-hamgnn_2_1.pkl` (Zenodo record 17239078; md5 `7f99cba551b4a0cbb84827cfe359cdac`). Checksum a newly obtained weight file before first use. Load it through the Uni-HamGNN route (rule 13), not the main `test_config.yaml` route (rule 7).
 13. For the universal weights, use the official `Uni-HamGNN` route (see rule 7 for why the main config has no Uni keys): start from the shipped `Uni-HamGNN/Input.yaml` example config and run the author's script directly — `python <HamGNN_repo>/Uni-HamGNN/Uni-HamiltonianPredictor.py --config <Input.yaml>` — with a config carrying `model_pkl_path`, `non_soc_data_dir`, `soc_data_dir`, `output_dir`, `device`, `calculate_mae`. The script must be executed as `__main__` (the pickle's top-level class is `__main__.HamiltonianPredictor`; importing it from another module breaks unpickling). It self-registers the `HamGNN_v_2_1.*` legacy package aliases and applies post-load attribute patches.
 14. In the Uni-HamGNN config, disable SOC with `soc_data_dir: null` (YAML null), never the bare word `None`: YAML parses that as a string, which bypasses the script's None-guard and fails with `FileNotFoundError: 'None/graph_data.npz'`. The pkl ships dual SOC + non-SOC models; `null` selects the non-SOC path even though `soc_enabled=True` is baked into the pickle.
 15. On newer environments (e3nn 0.5.6 / torch 2.5.0) the v2.1 pickle needs unpickle-compatibility shims in addition to the official `_patch_legacy_attributes` (which only patches post-load attributes): e3nn `CodeGenMixin.__setstate__` codegen-format migration (legacy bare torchscript bytes -> `(format, bytes)` tuples), torch 2.x Module container fields (`_backward_pre_hooks` etc.), `SphericalHarmonics.sph_func`, `LinearScaleWithWeights._cached_ones`, and `Activation.paths`. Install the shims first, then execute the official script via `runpy.run_path(..., run_name="__main__")`; do not modify the official script itself. A validated wrapper exists at `ky26049/agent_test/agent1_inference/04_rerun_true_weights/run_official_compat.py`. The v2.1 non-SOC model is single-channel (`collinear_spin=False`), `nao_max=26`.
-16. `num_k` is the TOTAL number of k-path points (pythTB semantics), not points per segment; seekpath auto paths for real structures have more vertices than small `num_k` values and generation fails silently — use an explicit `k_path` with `num_k` larger than the path's vertex count.
+
+## Calculate Bands and Return Results
+
+- Render `band_cal.yaml` from `<skill_root>/templates/HamGNN/band_cal.yaml.template`. Set the graph path and the actual `prediction_hamiltonian.npy` path from this run. Use the same backend, `nao_max`, SOC, and spin layout as the model. The single-channel non-SOC route uses `spin_colinear: false`. Confirm the selected band tool supports the orbital layout before launching.
+- For automatic k paths, check that `seekpath` is available in the execution environment. With a custom path, set `auto_mode: false`, `k_path`, and `label`. `nk` counts the total points and must exceed the number of path vertices. Run `MPLBACKEND=Agg python -m DFT_interfaces.openmx.band_cal --config band_cal.yaml` in the HamGNN environment and capture `band_cal.log`.
+- Verify the expected band `.dat` and `.png` files for each structure and spin channel and check that the band data are finite. Return the predicted Hamiltonian, band data and plot when requested, the run-local configs, and the preprocessing, inference, and band logs. Include the graph path when generated. Keep these artifacts under the selected prediction workdir.

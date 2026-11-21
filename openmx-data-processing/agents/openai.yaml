@@ -1,4 +1,4 @@
 interface:
   display_name: "OpenMX Data Processing"
-  short_description: "Prepare split-local OpenMX inputs and submit through the OpenMX-specific Inspire profile"
-  default_prompt: "Use $openmx-data-processing to prepare split-local OpenMX preprocessing inputs, then use $inspire-openmx-submit for the actual OpenMX submission and canonical resource defaults."
+  short_description: "Generate labeled HamGNN graphs with OpenMX"
+  default_prompt: "请用 $openmx-data-processing 帮我生成 HamGNN 有标签图数据。"

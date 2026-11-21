@@ -2,7 +2,9 @@
 set -euo pipefail
 
 usage() {
-    echo "Usage: $0 --workdir DIR [--jobs N] [--omp-threads N]"
+    echo "Usage: $0 --workdir DIR [--prepared-inputs] [--postprocess-only] [--jobs N] [--omp-threads N]"
+    echo "  --prepared-inputs  Use the DAT files already staged in INPUT_ROOT."
+    echo "  --postprocess-only  Run H0/overlap extraction for prediction graphs."
 }
 
 workdir=""
@@ -10,6 +12,7 @@ jobs=""
 omp_threads=""
 jobs_set=0
 omp_threads_set=0
+prepared_inputs=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -26,6 +29,14 @@ while [[ $# -gt 0 ]]; do
             omp_threads="$2"
             omp_threads_set=1
             shift 2
+            ;;
+        --prepared-inputs)
+            prepared_inputs=1
+            shift
+            ;;
+        --postprocess-only)
+            export OPENMX_POSTPROCESS_ONLY=1
+            shift
             ;;
         -h|--help)
             usage
@@ -61,6 +72,8 @@ if [[ "${omp_threads_set}" -eq 1 ]]; then
     fi
     run_args+=("${omp_threads}")
 fi
-bash ./dat_gen.sh
+if [[ "${prepared_inputs}" -eq 0 ]]; then
+    bash ./dat_gen.sh
+fi
 bash ./run_openmx.sh "${run_args[@]}"
 bash ./graphgen.sh
