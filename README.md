@@ -12,7 +12,7 @@ After installation, start with the result you want.
 - `Use $hamgnn-training to train a Si HamGNN model.`
 - `Use $hamgnn-inference to predict the band structure of this Si structure.`
 
-The skills look for relevant inputs in the project and reuse outputs from earlier stages. They ask for a path when inputs are missing or ambiguous, explain the defaults, and let you override parameters such as the training learning rate or the band k path.
+The skills look for relevant inputs in the project and reuse outputs from earlier stages. Before launching a run, they show the proposed settings and ask whether to use them or change parameters such as the learning rate or band k path. They wait for your choice. If you already want the defaults, include “use the defaults and run” in your request.
 
 ## Installation
 
